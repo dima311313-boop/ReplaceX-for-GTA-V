@@ -1,0 +1,1262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>646</width>
+    <height>374</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QLabel" name="lblLogotip">
+    <property name="geometry">
+     <rect>
+      <x>-50</x>
+      <y>-70</y>
+      <width>281</width>
+      <height>221</height>
+     </rect>
+    </property>
+    <property name="layoutDirection">
+     <enum>Qt::LayoutDirection::LeftToRight</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Shadow::Plain</enum>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="pixmap">
+     <pixmap resource="resursi.qrc">:/izobr/photo_2026-01-09_19-46-37-no-bg-preview (carve.photos).png</pixmap>
+    </property>
+    <property name="scaledContents">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="leditRedux">
+    <property name="geometry">
+     <rect>
+      <x>140</x>
+      <y>90</y>
+      <width>301</width>
+      <height>31</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="leditOrig">
+    <property name="geometry">
+     <rect>
+      <x>140</x>
+      <y>170</y>
+      <width>301</width>
+      <height>31</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkAutoLoad">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>340</y>
+      <width>41</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="tabletTracking">
+     <bool>false</bool>
+    </property>
+    <property name="acceptDrops">
+     <bool>false</bool>
+    </property>
+    <property name="autoFillBackground">
+     <bool>false</bool>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="checked">
+     <bool>false</bool>
+    </property>
+    <property name="autoRepeat">
+     <bool>false</bool>
+    </property>
+    <property name="autoExclusive">
+     <bool>false</bool>
+    </property>
+    <property name="tristate">
+     <bool>false</bool>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnReplaceOrig">
+    <property name="geometry">
+     <rect>
+      <x>340</x>
+      <y>300</y>
+      <width>120</width>
+      <height>46</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">QPushButton {
+    background-color: #2d2d2d;  /* Тёмно-серый, почти чёрный */
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 20px;
+    min-width: 80px;
+    min-height: 30px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background-color: #3d3d3d;
+}
+QPushButton:pressed {
+    background-color: #1d1d1d;
+}</string>
+    </property>
+    <property name="text">
+     <string>Original</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnReplaceRedux">
+    <property name="geometry">
+     <rect>
+      <x>180</x>
+      <y>300</y>
+      <width>120</width>
+      <height>46</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">QPushButton {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #f5a9b8, stop:1 #d473a0);
+    color: white;
+    border: none;
+    border-radius: 20px;  /* Чем больше — тем круглее, подгони под свой размер кнопки */
+    padding: 8px 20px;
+    min-width: 80px;
+    min-height: 30px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #f8b8c4, stop:1 #e080b0);
+}
+QPushButton:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #e090a5, stop:1 #c06090);
+}</string>
+    </property>
+    <property name="text">
+     <string>Redux</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="lblAuto">
+    <property name="geometry">
+     <rect>
+      <x>210</x>
+      <y>340</y>
+      <width>181</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>System</family>
+      <pointsize>9</pointsize>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>Автоматическая установка</string>
+    </property>
+    <property name="scaledContents">
+     <bool>false</bool>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnAddRedux">
+    <property name="geometry">
+     <rect>
+      <x>450</x>
+      <y>90</y>
+      <width>41</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="icon">
+     <iconset theme="QIcon::ThemeIcon::FolderOpen"/>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnDonat">
+    <property name="geometry">
+     <rect>
+      <x>550</x>
+      <y>0</y>
+      <width>50</width>
+      <height>50</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="icon">
+     <iconset resource="resursi.qrc">
+      <normaloff>:/izobr/png-klev-club-bgmd-p-logotip-doneishen-alerts-png-4.png</normaloff>:/izobr/png-klev-club-bgmd-p-logotip-doneishen-alerts-png-4.png</iconset>
+    </property>
+    <property name="iconSize">
+     <size>
+      <width>34</width>
+      <height>49</height>
+     </size>
+    </property>
+    <property name="shortcut">
+     <string/>
+    </property>
+    <property name="checkable">
+     <bool>false</bool>
+    </property>
+    <property name="checked">
+     <bool>false</bool>
+    </property>
+    <property name="autoRepeat">
+     <bool>false</bool>
+    </property>
+    <property name="autoExclusive">
+     <bool>false</bool>
+    </property>
+    <property name="autoDefault">
+     <bool>false</bool>
+    </property>
+    <property name="default">
+     <bool>false</bool>
+    </property>
+    <property name="flat">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="leditPapka">
+    <property name="geometry">
+     <rect>
+      <x>110</x>
+      <y>250</y>
+      <width>311</width>
+      <height>31</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QGroupBox" name="grbRedux">
+    <property name="geometry">
+     <rect>
+      <x>130</x>
+      <y>60</y>
+      <width>371</width>
+      <height>71</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Sitka</family>
+      <pointsize>10</pointsize>
+     </font>
+    </property>
+    <property name="title">
+     <string>Путь к файлу редукса</string>
+    </property>
+   </widget>
+   <widget class="QGroupBox" name="grbOrig">
+    <property name="geometry">
+     <rect>
+      <x>130</x>
+      <y>140</y>
+      <width>371</width>
+      <height>71</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Sitka</family>
+      <pointsize>10</pointsize>
+     </font>
+    </property>
+    <property name="title">
+     <string>Путь к оригинальному файлу</string>
+    </property>
+    <widget class="QPushButton" name="btnAddOrig">
+     <property name="geometry">
+      <rect>
+       <x>320</x>
+       <y>30</y>
+       <width>41</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset theme="QIcon::ThemeIcon::FolderOpen"/>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="grbPapka">
+    <property name="geometry">
+     <rect>
+      <x>100</x>
+      <y>220</y>
+      <width>421</width>
+      <height>71</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Sitka</family>
+      <pointsize>10</pointsize>
+     </font>
+    </property>
+    <property name="title">
+     <string>Путь к папке с игрой</string>
+    </property>
+    <widget class="QPushButton" name="btnAutoSearch">
+     <property name="geometry">
+      <rect>
+       <x>330</x>
+       <y>30</y>
+       <width>41</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Sitka</family>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Auto</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnPapka">
+     <property name="geometry">
+      <rect>
+       <x>380</x>
+       <y>30</y>
+       <width>41</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset theme="QIcon::ThemeIcon::FolderOpen"/>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QPushButton" name="btnTelegram">
+    <property name="geometry">
+     <rect>
+      <x>600</x>
+      <y>0</y>
+      <width>50</width>
+      <height>50</height>
+     </rect>
+    </property>
+    <property name="maximumSize">
+     <size>
+      <width>50</width>
+      <height>50</height>
+     </size>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="icon">
+     <iconset resource="resursi.qrc">
+      <normaloff>:/izobr/telegram_icon.png</normaloff>:/izobr/telegram_icon.png</iconset>
+    </property>
+    <property name="iconSize">
+     <size>
+      <width>90</width>
+      <height>87</height>
+     </size>
+    </property>
+   </widget>
+   <widget class="QLabel" name="miniProgress">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>320</y>
+      <width>151</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Titillium Web</family>
+      <bold>false</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="wordWrap">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QFrame" name="oknoGP">
+    <property name="geometry">
+     <rect>
+      <x>130</x>
+      <y>30</y>
+      <width>471</width>
+      <height>291</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Shape::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Shadow::Raised</enum>
+    </property>
+    <widget class="QPushButton" name="btnPapkaGP">
+     <property name="geometry">
+      <rect>
+       <x>370</x>
+       <y>70</y>
+       <width>41</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset theme="QIcon::ThemeIcon::FolderOpen"/>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="leditGunPuck">
+     <property name="geometry">
+      <rect>
+       <x>50</x>
+       <y>70</y>
+       <width>301</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label">
+     <property name="geometry">
+      <rect>
+       <x>170</x>
+       <y>0</y>
+       <width>151</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Source Code Pro</family>
+       <pointsize>10</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Установить ган-пак</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnDLS">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>150</y>
+       <width>41</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset theme="QIcon::ThemeIcon::FolderOpen"/>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="leditDLS">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>150</y>
+       <width>311</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="lblAutoGP">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>250</y>
+       <width>181</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>System</family>
+       <pointsize>9</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Автоматическая установка</string>
+     </property>
+     <property name="scaledContents">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkAutoLoadGP">
+     <property name="geometry">
+      <rect>
+       <x>320</x>
+       <y>250</y>
+       <width>41</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="tabletTracking">
+      <bool>false</bool>
+     </property>
+     <property name="acceptDrops">
+      <bool>false</bool>
+     </property>
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+     <property name="autoRepeat">
+      <bool>false</bool>
+     </property>
+     <property name="autoExclusive">
+      <bool>false</bool>
+     </property>
+     <property name="tristate">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnAutoSearchDLS">
+     <property name="geometry">
+      <rect>
+       <x>350</x>
+       <y>150</y>
+       <width>41</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Sitka</family>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Auto</string>
+     </property>
+    </widget>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>40</y>
+       <width>391</width>
+       <height>71</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Sitka</family>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="title">
+      <string>Папка с ган паками</string>
+     </property>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>120</y>
+       <width>431</width>
+       <height>71</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Sitka</family>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="title">
+      <string>Путь к dlspack</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnReplaceGunPuck">
+     <property name="geometry">
+      <rect>
+       <x>110</x>
+       <y>200</y>
+       <width>120</width>
+       <height>46</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #f5a9b8, stop:1 #d473a0);
+    color: white;
+    border: none;
+    border-radius: 20px;  /* Чем больше — тем круглее, подгони под свой размер кнопки */
+    padding: 8px 20px;
+    min-width: 80px;
+    min-height: 30px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #f8b8c4, stop:1 #e080b0);
+}
+QPushButton:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #e090a5, stop:1 #c06090);
+}</string>
+     </property>
+     <property name="text">
+      <string>GunPuck</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnReplaceOrigGP">
+     <property name="geometry">
+      <rect>
+       <x>250</x>
+       <y>200</y>
+       <width>120</width>
+       <height>46</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+    background-color: #2d2d2d;  /* Тёмно-серый, почти чёрный */
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 20px;
+    min-width: 80px;
+    min-height: 30px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background-color: #3d3d3d;
+}
+QPushButton:pressed {
+    background-color: #1d1d1d;
+}</string>
+     </property>
+     <property name="text">
+      <string>Original</string>
+     </property>
+    </widget>
+    <widget class="QListView" name="listView">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>471</width>
+       <height>291</height>
+      </rect>
+     </property>
+    </widget>
+    <zorder>listView</zorder>
+    <zorder>label</zorder>
+    <zorder>lblAutoGP</zorder>
+    <zorder>checkAutoLoadGP</zorder>
+    <zorder>groupBox</zorder>
+    <zorder>groupBox_2</zorder>
+    <zorder>btnAutoSearchDLS</zorder>
+    <zorder>btnDLS</zorder>
+    <zorder>btnPapkaGP</zorder>
+    <zorder>leditGunPuck</zorder>
+    <zorder>leditDLS</zorder>
+    <zorder>btnReplaceGunPuck</zorder>
+    <zorder>btnReplaceOrigGP</zorder>
+   </widget>
+   <widget class="QPushButton" name="btnOknoDop">
+    <property name="geometry">
+     <rect>
+      <x>559</x>
+      <y>343</y>
+      <width>91</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Source Code Pro Medium</family>
+      <pointsize>10</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Доп.</string>
+    </property>
+   </widget>
+   <widget class="QFrame" name="oknoKnopohki">
+    <property name="geometry">
+     <rect>
+      <x>59</x>
+      <y>30</y>
+      <width>71</width>
+      <height>291</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Shape::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Shadow::Raised</enum>
+    </property>
+    <widget class="QListView" name="listView_2">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>71</width>
+       <height>291</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QListWidget, QListView {
+    background-color: #1e1e1e; /* Темный цвет фона */
+    border: 1px solid white;   /* Белая обводка толщиной 1 пиксель */
+    color: white;              /* Убедимся, что текст внутри тоже белый */
+    padding: 5px;              /* Небольшой отступ внутри рамки */
+}
+</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnGanpacOpen">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>51</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Impact</family>
+      </font>
+     </property>
+     <property name="text">
+      <string>Gunpack</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_4">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>71</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Unispace</family>
+       <pointsize>8</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+    color: #FFF5EE; /* SeaShell - чуть теплее, кремовый */
+}</string>
+     </property>
+     <property name="text">
+      <string>Установить:</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnZVOpen">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>90</y>
+       <width>51</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Impact</family>
+      </font>
+     </property>
+     <property name="text">
+      <string>Звуки</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QFrame" name="oknoDiscleamer">
+    <property name="geometry">
+     <rect>
+      <x>130</x>
+      <y>30</y>
+      <width>471</width>
+      <height>291</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Shape::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Shadow::Raised</enum>
+    </property>
+    <widget class="QListView" name="listDs">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>471</width>
+       <height>291</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QListWidget, QListView {
+    background-color: #1e1e1e; /* Темный цвет фона */
+    border: 1px solid white;   /* Белая обводка толщиной 1 пиксель */
+    color: white;              /* Убедимся, что текст внутри тоже белый */
+    padding: 5px;              /* Небольшой отступ внутри рамки */
+}
+</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="labelDis">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>20</y>
+       <width>211</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Perpetua</family>
+       <pointsize>24</pointsize>
+       <italic>false</italic>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+    color: red; /* Или используйте шестнадцатеричный код #FF0000 */
+}</string>
+     </property>
+     <property name="text">
+      <string>Дисклеймер</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_3">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>80</y>
+       <width>411</width>
+       <height>131</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Unispace</family>
+       <pointsize>9</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+    color: #FFF5EE; /* SeaShell - чуть теплее, кремовый */
+}</string>
+     </property>
+     <property name="text">
+      <string>Программа ReplaceX предоставляет исключительно функционал копирования файлов из одного места в другое в нужное время. Программа не несет ответственности за работоспособность, целостность или любые возможные повреждения модификаций для игры GTA V Legacy, установленных с ее помощью. Все риски, связанные с использованием модификаций, ложатся на конечного пользователя.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QPushButton" name="btnExitGP">
+    <property name="geometry">
+     <rect>
+      <x>570</x>
+      <y>30</y>
+      <width>31</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="icon">
+     <iconset theme="QIcon::ThemeIcon::ApplicationExit"/>
+    </property>
+   </widget>
+   <widget class="QFrame" name="oknoZV">
+    <property name="geometry">
+     <rect>
+      <x>130</x>
+      <y>30</y>
+      <width>471</width>
+      <height>291</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Shape::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Shadow::Raised</enum>
+    </property>
+    <widget class="QPushButton" name="btnPapkaZV">
+     <property name="geometry">
+      <rect>
+       <x>370</x>
+       <y>70</y>
+       <width>41</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset theme="QIcon::ThemeIcon::FolderOpen"/>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="leditModZV">
+     <property name="geometry">
+      <rect>
+       <x>50</x>
+       <y>70</y>
+       <width>301</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_5">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>0</y>
+       <width>241</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Source Code Pro</family>
+       <pointsize>10</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+    color: #FFF5EE; /* SeaShell - чуть теплее, кремовый */
+}</string>
+     </property>
+     <property name="text">
+      <string>Установить новые звуки оружия</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnZVMod">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>150</y>
+       <width>41</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset theme="QIcon::ThemeIcon::FolderOpen"/>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="leditPapcaZV">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>150</y>
+       <width>311</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="lblAutoGP_3">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>250</y>
+       <width>181</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>System</family>
+       <pointsize>9</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+    color: #FFF5EE; /* SeaShell - чуть теплее, кремовый */
+}</string>
+     </property>
+     <property name="text">
+      <string>Автоматическая установка</string>
+     </property>
+     <property name="scaledContents">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkAutoLoadZV">
+     <property name="geometry">
+      <rect>
+       <x>320</x>
+       <y>250</y>
+       <width>41</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="tabletTracking">
+      <bool>false</bool>
+     </property>
+     <property name="acceptDrops">
+      <bool>false</bool>
+     </property>
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+     <property name="autoRepeat">
+      <bool>false</bool>
+     </property>
+     <property name="autoExclusive">
+      <bool>false</bool>
+     </property>
+     <property name="tristate">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnAutoSearchZV">
+     <property name="geometry">
+      <rect>
+       <x>350</x>
+       <y>150</y>
+       <width>41</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Sitka</family>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Auto</string>
+     </property>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_5">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>40</y>
+       <width>391</width>
+       <height>71</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Sitka</family>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+    color: #FFF5EE; /* SeaShell - чуть теплее, кремовый */
+}</string>
+     </property>
+     <property name="title">
+      <string>Папка с модифицированными звуками</string>
+     </property>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_6">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>120</y>
+       <width>431</width>
+       <height>71</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Sitka</family>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+    color: #FFF5EE; /* SeaShell - чуть теплее, кремовый */
+}</string>
+     </property>
+     <property name="title">
+      <string>Путь к audio</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnReplaceModZV">
+     <property name="geometry">
+      <rect>
+       <x>110</x>
+       <y>200</y>
+       <width>120</width>
+       <height>46</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #f5a9b8, stop:1 #d473a0);
+    color: white;
+    border: none;
+    border-radius: 20px;  /* Чем больше — тем круглее, подгони под свой размер кнопки */
+    padding: 8px 20px;
+    min-width: 80px;
+    min-height: 30px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #f8b8c4, stop:1 #e080b0);
+}
+QPushButton:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #e090a5, stop:1 #c06090);
+}</string>
+     </property>
+     <property name="text">
+      <string>Mod</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnReplaceOrigZV">
+     <property name="geometry">
+      <rect>
+       <x>250</x>
+       <y>200</y>
+       <width>120</width>
+       <height>46</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+    background-color: #2d2d2d;  /* Тёмно-серый, почти чёрный */
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 20px;
+    min-width: 80px;
+    min-height: 30px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background-color: #3d3d3d;
+}
+QPushButton:pressed {
+    background-color: #1d1d1d;
+}</string>
+     </property>
+     <property name="text">
+      <string>Original</string>
+     </property>
+    </widget>
+    <widget class="QListView" name="listView_4">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>471</width>
+       <height>291</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QListWidget, QListView {
+    background-color: #1e1e1e; /* Темный цвет фона */
+    border: 1px solid white;   /* Белая обводка толщиной 1 пиксель */
+    color: white;              /* Убедимся, что текст внутри тоже белый */
+    padding: 5px;              /* Небольшой отступ внутри рамки */
+}</string>
+     </property>
+    </widget>
+    <zorder>listView_4</zorder>
+    <zorder>label_5</zorder>
+    <zorder>lblAutoGP_3</zorder>
+    <zorder>checkAutoLoadZV</zorder>
+    <zorder>groupBox_5</zorder>
+    <zorder>groupBox_6</zorder>
+    <zorder>btnReplaceModZV</zorder>
+    <zorder>btnReplaceOrigZV</zorder>
+    <zorder>btnAutoSearchZV</zorder>
+    <zorder>btnZVMod</zorder>
+    <zorder>btnPapkaZV</zorder>
+    <zorder>leditPapcaZV</zorder>
+    <zorder>leditModZV</zorder>
+   </widget>
+   <zorder>lblLogotip</zorder>
+   <zorder>btnReplaceOrig</zorder>
+   <zorder>btnReplaceRedux</zorder>
+   <zorder>checkAutoLoad</zorder>
+   <zorder>lblAuto</zorder>
+   <zorder>btnDonat</zorder>
+   <zorder>grbRedux</zorder>
+   <zorder>grbOrig</zorder>
+   <zorder>grbPapka</zorder>
+   <zorder>btnAddRedux</zorder>
+   <zorder>leditOrig</zorder>
+   <zorder>leditRedux</zorder>
+   <zorder>leditPapka</zorder>
+   <zorder>btnTelegram</zorder>
+   <zorder>miniProgress</zorder>
+   <zorder>oknoGP</zorder>
+   <zorder>btnOknoDop</zorder>
+   <zorder>oknoKnopohki</zorder>
+   <zorder>oknoDiscleamer</zorder>
+   <zorder>oknoZV</zorder>
+   <zorder>btnExitGP</zorder>
+  </widget>
+ </widget>
+ <resources>
+  <include location="resursi.qrc"/>
+ </resources>
+ <connections/>
+</ui>

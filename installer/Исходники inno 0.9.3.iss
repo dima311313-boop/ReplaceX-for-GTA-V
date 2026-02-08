@@ -2,18 +2,18 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "ReplaceX"
-#define MyAppVersion "0.9.2 beta"
+#define MyAppVersion "0.9.3 beta"
 #define MyAppPublisher "My Company, Inc."
 #define MyAppURL "https://t.me/replacexDev"
 #define MyAppExeName "ReplaceX.exe"
-#define MyAppAssocName MyAppName + " File"
+#define MyAppAssocName MyAppName + ""
 #define MyAppAssocExt ".myp"
 #define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{ACBFF63A-7C42-47D0-8CB1-5EB96E60C525}
+AppId={{A5FA93C2-95EC-4A41-8DE4-D749B6FDEBE7}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -35,7 +35,7 @@ ChangesAssociations=yes
 DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
-OutputBaseFilename=mysetup
+OutputBaseFilename=ReplaceX 0.9.3_Install
 SetupIconFile=C:\Users\Admin\Downloads\photo_2026-01-15_107-25-59-round-corners.ico
 SolidCompression=yes
 WizardStyle=modern
@@ -76,8 +76,8 @@ Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\Admin\Desktop\Test\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\Admin\Desktop\Test\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\Users\Admin\Desktop\Release 0.9.3\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\Admin\Desktop\Release 0.9.3\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Registry]

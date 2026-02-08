@@ -138,7 +138,7 @@ QPushButton:pressed {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #f5a9b8, stop:1 #d473a0);
     color: white;
     border: none;
-    border-radius: 20px;  /* Чем больше — тем круглее, подгони под свой размер кнопки */
+    border-radius: 20px;  /* Чем больше — тем круглее*/
     padding: 8px 20px;
     min-width: 80px;
     min-height: 30px;
@@ -811,6 +811,24 @@ QPushButton:pressed {
       <string>Звуки</string>
      </property>
     </widget>
+    <widget class="QPushButton" name="btnHDD_OpenDis">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>150</y>
+       <width>51</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Impact</family>
+      </font>
+     </property>
+     <property name="text">
+      <string>HDD</string>
+     </property>
+    </widget>
    </widget>
    <widget class="QFrame" name="oknoDiscleamer">
     <property name="geometry">
@@ -1232,6 +1250,332 @@ QPushButton:pressed {
     <zorder>leditPapcaZV</zorder>
     <zorder>leditModZV</zorder>
    </widget>
+   <widget class="QFrame" name="oknoHDD">
+    <property name="geometry">
+     <rect>
+      <x>130</x>
+      <y>30</y>
+      <width>471</width>
+      <height>291</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Shape::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Shadow::Raised</enum>
+    </property>
+    <widget class="QLabel" name="label_6">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>0</y>
+       <width>241</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Source Code Pro</family>
+       <pointsize>10</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+    color: #FFF5EE; /* SeaShell - чуть теплее, кремовый */
+}</string>
+     </property>
+     <property name="text">
+      <string>Установить новые звуки оружия</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="lblAutoGP_4">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>250</y>
+       <width>181</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>System</family>
+       <pointsize>9</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+    color: #FFF5EE; /* SeaShell - чуть теплее, кремовый */
+}</string>
+     </property>
+     <property name="text">
+      <string>Включать автоматический</string>
+     </property>
+     <property name="scaledContents">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkAutoOn_Off">
+     <property name="geometry">
+      <rect>
+       <x>320</x>
+       <y>250</y>
+       <width>41</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="tabletTracking">
+      <bool>false</bool>
+     </property>
+     <property name="acceptDrops">
+      <bool>false</bool>
+     </property>
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+     <property name="autoRepeat">
+      <bool>false</bool>
+     </property>
+     <property name="autoExclusive">
+      <bool>false</bool>
+     </property>
+     <property name="tristate">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_7">
+     <property name="geometry">
+      <rect>
+       <x>60</x>
+       <y>80</y>
+       <width>331</width>
+       <height>71</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Sitka</family>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+    color: #FFF5EE; /* SeaShell - чуть теплее, кремовый */
+}</string>
+     </property>
+     <property name="title">
+      <string> Задержка (сек)</string>
+     </property>
+     <widget class="QLineEdit" name="leditTimeVvod">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>30</y>
+        <width>311</width>
+        <height>31</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QPushButton" name="btnSaveTime">
+     <property name="geometry">
+      <rect>
+       <x>100</x>
+       <y>190</y>
+       <width>120</width>
+       <height>46</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #f5a9b8, stop:1 #d473a0);
+    color: white;
+    border: none;
+    border-radius: 20px;  /* Чем больше — тем круглее, подгони под свой размер кнопки */
+    padding: 8px 20px;
+    min-width: 80px;
+    min-height: 30px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #f8b8c4, stop:1 #e080b0);
+}
+QPushButton:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #e090a5, stop:1 #c06090);
+}</string>
+     </property>
+     <property name="text">
+      <string>Save</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnOn_Off_HDD">
+     <property name="geometry">
+      <rect>
+       <x>260</x>
+       <y>190</y>
+       <width>120</width>
+       <height>46</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+    background-color: #2d2d2d;  /* Тёмно-серый, почти чёрный */
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 20px;
+    min-width: 80px;
+    min-height: 30px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background-color: #3d3d3d;
+}
+QPushButton:pressed {
+    background-color: #1d1d1d;
+}</string>
+     </property>
+     <property name="text">
+      <string>Вкл./Выкл.</string>
+     </property>
+    </widget>
+    <widget class="QListView" name="listView_5">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>471</width>
+       <height>291</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QListWidget, QListView {
+    background-color: #1e1e1e; /* Темный цвет фона */
+    border: 1px solid white;   /* Белая обводка толщиной 1 пиксель */
+    color: white;              /* Убедимся, что текст внутри тоже белый */
+    padding: 5px;              /* Небольшой отступ внутри рамки */
+}</string>
+     </property>
+    </widget>
+    <widget class="QListView" name="Instruction">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>471</width>
+       <height>291</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QListWidget, QListView {
+    background-color: #1e1e1e; /* Темный цвет фона */
+    border: 1px solid white;   /* Белая обводка толщиной 1 пиксель */
+    color: white;              /* Убедимся, что текст внутри тоже белый */
+    padding: 5px;              /* Небольшой отступ внутри рамки */
+}</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnNext">
+     <property name="geometry">
+      <rect>
+       <x>190</x>
+       <y>250</y>
+       <width>80</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>System</family>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #f8b8c4, stop:1 #e080b0);
+}
+QPushButton:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #e090a5, stop:1 #c06090);
+}</string>
+     </property>
+     <property name="text">
+      <string>Next&gt;&gt;</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="lblInstrucktion">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>80</y>
+       <width>411</width>
+       <height>131</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Unispace</family>
+       <pointsize>10</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+    color: #FFF5EE; /* SeaShell - чуть теплее, кремовый */
+}</string>
+     </property>
+     <property name="text">
+      <string>Если у вас игра установленна на диск HDD и все ваши модификации не успевают полностью скопироваться в папку с игрой до запуска игры, вы можете увеличеть время загрузки GTA V Legacy с помощью заморозки процесса GTA5.exe на определенное количество секунд.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QLabel" name="lblZader">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>0</y>
+       <width>281</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Source Code Pro</family>
+       <pointsize>10</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+    color: #FFF5EE; /* SeaShell - чуть теплее, кремовый */
+}</string>
+     </property>
+     <property name="text">
+      <string>Установить задержку на запуск игры</string>
+     </property>
+    </widget>
+    <zorder>listView_5</zorder>
+    <zorder>label_6</zorder>
+    <zorder>lblAutoGP_4</zorder>
+    <zorder>checkAutoOn_Off</zorder>
+    <zorder>groupBox_7</zorder>
+    <zorder>btnSaveTime</zorder>
+    <zorder>btnOn_Off_HDD</zorder>
+    <zorder>Instruction</zorder>
+    <zorder>btnNext</zorder>
+    <zorder>lblInstrucktion</zorder>
+    <zorder>lblZader</zorder>
+   </widget>
    <zorder>lblLogotip</zorder>
    <zorder>btnReplaceOrig</zorder>
    <zorder>btnReplaceRedux</zorder>
@@ -1247,11 +1591,12 @@ QPushButton:pressed {
    <zorder>leditPapka</zorder>
    <zorder>btnTelegram</zorder>
    <zorder>miniProgress</zorder>
-   <zorder>oknoGP</zorder>
    <zorder>btnOknoDop</zorder>
    <zorder>oknoKnopohki</zorder>
    <zorder>oknoDiscleamer</zorder>
    <zorder>oknoZV</zorder>
+   <zorder>oknoHDD</zorder>
+   <zorder>oknoGP</zorder>
    <zorder>btnExitGP</zorder>
   </widget>
  </widget>

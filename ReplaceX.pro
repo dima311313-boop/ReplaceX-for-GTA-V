@@ -28,5 +28,7 @@ win32: RC_FILE = resources.rc.txt
 RESOURCES += \
     resursi.qrc
 
-# Добавь это в конец для работы с процессами Windows, если еще не добавил
 win32: LIBS += -luser32 -lkernel32
+
+LIBS += -lshell32
+

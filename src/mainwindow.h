@@ -66,6 +66,17 @@ private:
     QString batPath;
 
 
+
+
+    // Вспомогательные функции
+    bool smartReplace(const QString &source, const QString &targetDir, const QString &targetFileName);
+    void killGtaEcosystem();
+    bool isProcessRunning(const QString &exeName);
+    void restoreAllBackups();
+    bool m_wasGameRunning = false;
+
+
+
     // === Флаги состояния ===
     bool isSoundsInstalled = false;    //Установлены ли звуки
     bool isGunPackInstalled = false;   //Установлены ли ган‑паки
@@ -101,6 +112,7 @@ private:
     bool gtaWasRunning = false;
     void runBatch();
     bool oknoDop = true;
+    bool safeCopy(const QString &src, const QString &destFolder, bool isRestoring);
 
 protected:
     //События Qt

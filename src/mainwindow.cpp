@@ -50,7 +50,7 @@ QPixmap getRoundedPixmap(const QPixmap& src, int radius) {
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
-
+    loadSettings();
     QPixmap iconPixmap(":/izobr/IconG.png");
     int cornerRadius = 25; // Чем больше число, тем сильнее закругление
 
@@ -112,7 +112,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     this->setFixedSize(646, 374);
 
-    qDebug() << "Программа запущенна";
+    qDebug() << "Программа запущенна. Версия 0.9.3(fix 02)";
     ui->miniProgress->setText("Ожидание запуска игры");
     this->setWindowIcon(QIcon(":/izobr/photo_2026-01-15_107-25-59-round-corners.ico"));
     this->setWindowTitle("ReplaceX");
@@ -592,22 +592,31 @@ void MainWindow::on_checkAutoLoad_toggled(bool checked) {
         return;
     }
 
-    // Нормализуем пути
-    QString pathO = QDir::fromNativeSeparators(ui->leditOrig->text());
-    QString pathR = QDir::fromNativeSeparators(ui->leditRedux->text());
+    // Advanced Validation for Redux/Original paths
+    QFileInfo fiOrig(ui->leditOrig->text());
+    QFileInfo fiRedux(ui->leditRedux->text());
+    QDir dirGame(ui->leditPapka->text());
 
-    bool isOrigOk = pathO.endsWith("/update.rpf", Qt::CaseInsensitive);
-    bool isReduxOk = pathR.endsWith("/update.rpf", Qt::CaseInsensitive);
+    bool isOrigOk = fiOrig.exists() && fiOrig.fileName().toLower() == "update.rpf";
+    bool isReduxOk = fiRedux.exists() && fiRedux.fileName().toLower() == "update.rpf";
+    bool isGameOk = dirGame.exists() && dirGame.dirName().toLower() == "update";
 
-    if (isOrigOk && isReduxOk) {
+    if (isOrigOk && isReduxOk && isGameOk) {
         QSettings("MyCompany", "MyGameTool").setValue("Settings/AutoLoad", true);
+        qDebug() << "AutoLoad enabled successfully";
     } else {
+        // Block signals to prevent recursive toggle calls when resetting
         ui->checkAutoLoad->blockSignals(true);
         ui->checkAutoLoad->setChecked(false);
         ui->checkAutoLoad->blockSignals(false);
 
-        QString errorMsg = !isOrigOk ? "Путь к оригиналу" : "Путь к редуксу";
-        QMessageBox::critical(this, "Ошибка", errorMsg + " должен заканчиваться на /update.rpf");
+        QStringList errorList;
+        if (!isGameOk) errorList << "Путь к папке игры (должна быть папка 'update')";
+        if (!isOrigOk) errorList << "Файл оригинала должен называться update.rpf и существовать";
+        if (!isReduxOk) errorList << "Файл редукса должен называться update.rpf и существовать";
+
+        QMessageBox::critical(this, "Ошибка валидации",
+                              "Невозможно включить автозагрузку. Проверьте:\n- " + errorList.join("\n- "));
     }
 }
 void MainWindow::on_btnDonat_clicked() {
@@ -910,18 +919,38 @@ void MainWindow::on_btnDLS_clicked()
     }
 }
 void MainWindow::on_checkAutoLoadGP_toggled(bool checked) {
-    // Сохраняем выбор пользователя в настройки
-    QSettings settings("MyCompany", "MyGameTool");
-    settings.setValue("checkAutoLoadGP", checked);
+    if (!checked) {
+        QSettings("MyCompany", "MyGameTool").setValue("checkAutoLoadGP", false);
+        return;
+    }
 
-    // Сохраняем актуальные пути, чтобы они были доступны при следующем запуске
-    settings.setValue("pathGunPuck", ui->leditGunPuck->text());
-    settings.setValue("pathDLS", ui->leditDLS->text());
+    QDir srcDir(ui->leditGunPuck->text());
+    QDir targetDir(ui->leditDLS->text());
 
-    if (checked) {
-        qDebug() << "Автозагрузка ган-паков включена.";
+    // Validation: The GunPack source MUST be a directory containing other directories (like patchday18ng)
+    // and it MUST NOT contain dlc.rpf directly (meaning the user selected a specific pack instead of the parent folder)
+    bool isSourceValid = srcDir.exists() && !srcDir.exists("dlc.rpf") && !srcDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty();
+    bool isTargetValid = targetDir.exists() && (targetDir.absolutePath().toLower().endsWith("/dlcpacks") || targetDir.absolutePath().toLower().endsWith("\\dlcpacks"));
+
+    if (isSourceValid && isTargetValid) {
+        QSettings settings("MyCompany", "MyGameTool");
+        settings.setValue("checkAutoLoadGP", true);
+        settings.setValue("pathGunPuck", ui->leditGunPuck->text());
+        settings.setValue("pathDLS", ui->leditDLS->text());
+        qDebug() << "GunPack AutoLoad enabled";
     } else {
-        qDebug() << "Автозагрузка ган-паков выключена.";
+        ui->checkAutoLoadGP->blockSignals(true);
+        ui->checkAutoLoadGP->setChecked(false);
+        ui->checkAutoLoadGP->blockSignals(false);
+
+        QString errorDetail;
+        if (!targetDir.exists()) errorDetail = "Целевая папка dlcpacks не найдена.";
+        else if (!isTargetValid) errorDetail = "Целевая папка должна заканчиваться на /dlcpacks.";
+        else if (srcDir.exists("dlc.rpf")) errorDetail = "Вы выбрали папку конкретного ганпака (внутри есть dlc.rpf). \nВыберите РОДИТЕЛЬСКУЮ папку, где лежат все папки ганпаков (patchdayX и т.д.).";
+        else if (srcDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty()) errorDetail = "Выбранная папка с ганпаками пуста.";
+        else errorDetail = "Проверьте правильность путей к ганпакам.";
+
+        QMessageBox::warning(this, "Ошибка настройки GunPack", errorDetail);
     }
 }
 
@@ -1001,10 +1030,10 @@ void MainWindow::on_btnReplaceGunPuck_clicked()
         }
     }
     if (failCount == 0){
-    qDebug() << "Скопированно: %1 ";
+    qDebug() << "Успех";
     }
     else{
-        qDebug() << "Успешно: %1. C ошибками: %2";
+        qDebug() << "О.1.2.b03";
     }
     /* Уведомление
     if (failCount == 0) {
@@ -1711,9 +1740,8 @@ void MainWindow::loadSettings() {
     m_modSoundPath = s.value("SoundMod").toString();
     m_x64AudioSfxPath = s.value("SfxPath").toString();
 
-    // ЗАГРУЖАЕМ ГАЛОЧКИ (без вызова сигналов, чтобы фильтры не ругались)
     ui->checkAutoLoad->blockSignals(true);
-    ui->checkAutoLoad->setChecked(s.value("checkAutoLoad", false).toBool());
+    ui->checkAutoLoad->setChecked(s.value("Settings/AutoLoad", false).toBool());
     ui->checkAutoLoad->blockSignals(false);
 
     ui->checkAutoLoadGP->blockSignals(true);
@@ -1734,34 +1762,28 @@ void MainWindow::on_checkAutoLoadZV_toggled(bool checked) {
         return;
     }
 
+    QString pathMod = QDir::fromNativeSeparators(ui->leditModZV->text());
+    QString pathSfx = QDir::fromNativeSeparators(ui->leditPapcaZV->text());
 
-    QString pathMod = QDir::fromNativeSeparators(ui->leditModZV->text()).toLower();
-    QString pathPapca = QDir::fromNativeSeparators(ui->leditPapcaZV->text()).toLower();
+    QDir modDir(pathMod);
+    QDir sfxDir(pathSfx);
 
+    bool hasModFiles = modDir.exists() && !modDir.entryList(QStringList() << "*.rpf", QDir::Files).isEmpty();
+    bool isSfxFolder = sfxDir.exists() && sfxDir.absolutePath().toLower().endsWith("/sfx");
 
-    bool isRpf = pathMod.endsWith(".rpf");
-
-    if (pathPapca.endsWith("/")) pathPapca.chop(1);
-    bool isSfxOk = pathPapca.endsWith("/sfx");
-
-    if (!isRpf && isSfxOk) {
-        // Если всё ок
+    if (hasModFiles && isSfxFolder) {
         QSettings("MyCompany", "MyGameTool").setValue("checkAutoLoadZV", true);
-        qDebug() << "Автоустановка звуков: ВКЛЮЧЕНА";
     } else {
-        // Если ошибка — сбрасываем галочку
         ui->checkAutoLoadZV->blockSignals(true);
         ui->checkAutoLoadZV->setChecked(false);
         ui->checkAutoLoadZV->blockSignals(false);
 
         QString error;
-        if (isRpf) {
-            error = "В поле 'Папка с модифицированными звуками' не должен быть указан .rpf файл напрямую (положите .rpf файл/файлы в одну общую папку для звуков и укажите путь к ней).";
-        } else {
-            error = "Путь к папке звуков должен заканчиваться на /sfx";
-        }
+        if (!isSfxFolder) error = "Путь к папке звуков игры должен заканчиваться на /sfx";
+        else if (!modDir.exists()) error = "Папка с модами звуков не существует.";
+        else error = "В папке модов не найдено ни одного .rpf файла.";
 
-        QMessageBox::warning(this, "Ошибка", error);
+        QMessageBox::warning(this, "Ошибка звуков", error);
     }
 }
 
@@ -1951,7 +1973,7 @@ void MainWindow::on_btnSaveTime_clicked()
     // 2. Записываем число внутрь .bat файла
     saveTimeToFile();
 
-    qDebug() << "Время сохранено везде!";
+    qDebug() << "Время сохранено!";
 
 }
 
@@ -1975,7 +1997,7 @@ void MainWindow::on_checkAutoOn_Off_toggled(bool checked)
         // 2. Если включили: сбрасываем флаг и запускаем таймер
         gtaWasRunning = false;
         checkTimer->start(2000); // Проверка каждые 2 сек
-        qDebug() << "Авто-режим активирован. Жду запуска GTA5.exe...";
+        qDebug() << "Авто-режим .bat включен";
     } else {
         // 3. Если выключили: останавливаем таймер
         checkTimer->stop();
@@ -2003,7 +2025,7 @@ void MainWindow::saveTimeToFile() {
         content.replace(re, match.captured(1) + newTime);
         qDebug() << "Время заменено на:" << newTime;
     } else {
-        qWarning() << "Строка 'timeout /t' не найдена. Батник в порядке?";
+        qWarning() << "Строка 'timeout /t' не найдена.";
     }
 
     if (file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
@@ -2038,7 +2060,7 @@ void MainWindow::checkGtaProcess() {
 
 void MainWindow::handleProcessError(QProcess::ProcessError error) {
     qCritical() << "ОШИБКА QProcess:" << error;
-    qCritical() << "Текстовое описание:" << batchProcess->errorString();
+    qCritical() << "Ошибка бат:" << batchProcess->errorString();
 }
 
 void MainWindow::handleProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
@@ -2072,19 +2094,11 @@ void MainWindow::runBatch() {
     // Запускаем батник. 5-й параметр (nativeDir) лечит ошибку с PsSuspend64
     ShellExecute(NULL, L"open", nativeFile.c_str(), NULL, nativeDir.c_str(), SW_SHOWNORMAL);
 
-    qDebug() << "Батник запущен (вручную или авто)";
+    qDebug() << "Батник запущен";
 }
 
 bool MainWindow::isValidRpfPath(const QString &filePath) {
     if (filePath.isEmpty()) return false;
-
-    //Проверяем, существует ли файл физически
-    if (!QFile::exists(filePath)) return false;
-
-
-    if (!filePath.toLower().endsWith("/update.rpf") && !filePath.toLower().endsWith("\\update.rpf")) {
-        return false;
-    }
-
-    return true;
+    QFileInfo fi(filePath);
+    return fi.exists() && fi.fileName().toLower() == "update.rpf";
 }

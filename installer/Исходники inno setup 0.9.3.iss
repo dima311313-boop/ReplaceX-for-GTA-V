@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "ReplaceX"
-#define MyAppVersion "0.9.3 beta"
+#define MyAppVersion "0.9.3 beta (fix)"
 #define MyAppPublisher "My Company, Inc."
 #define MyAppURL "https://t.me/replacexDev"
 #define MyAppExeName "ReplaceX.exe"
@@ -13,7 +13,7 @@
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{500E4153-CCCA-49D2-944E-38970E45C9AB}
+AppId={{467EB1CB-2345-4246-B241-8F8CD59A0D67}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -35,7 +35,7 @@ ChangesAssociations=yes
 DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
-OutputBaseFilename=ReplaceX 0.9.3 beta_Install
+OutputBaseFilename=ReplaceX 0.9.3beta_Install
 SetupIconFile=C:\Users\Admin\Downloads\photo_2026-01-15_107-25-59-round-corners.ico
 SolidCompression=yes
 WizardStyle=modern

@@ -1,5 +1,12 @@
 [
-  {"name": "Аноним", "amount": 50},
-  {"name": "megadobry", "amount": 150}
+  {
+    "name": "Аноним",
+    "amount": 50
+  },
+  {
+    "name": "megadobry",
+    "amount": 100
+  }
 ]
+
 

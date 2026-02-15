@@ -1,13 +1,19 @@
 {
   "update": {
     "version": "0.9.3",
-    "url": "https://example.com/download"
+    "url": "https://example.com/download",
+    "changelog": [
+      "Исправлен вылет при запуске на Windows 11",
+      "Добавлена поддержка новых моделей GTA V",
+      "Улучшена скорость загрузки ресурсов"
+    ]
   },
   "donators": [
     { "name": "Аноним", "amount": 50 },
     { "name": "megadobry", "amount": 100 }
   ]
 }
+
 
 
 

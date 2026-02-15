@@ -1,12 +1,13 @@
-[
-  {
-    "name": "Аноним",
-    "amount": 50
+{
+  "update": {
+    "version": "0.9.3",
+    "url": "https://example.com/download"
   },
-  {
-    "name": "megadobry",
-    "amount": 100
-  }
-]
+  "donators": [
+    { "name": "Аноним", "amount": 50 },
+    { "name": "megadobry", "amount": 100 }
+  ]
+}
+
 
 

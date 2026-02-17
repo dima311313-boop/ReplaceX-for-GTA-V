@@ -23,6 +23,12 @@
 #include <QBitmap>
 #include <QPropertyAnimation>
 #include <QGraphicsOpacityEffect>
+#include <QNetworkReply>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonValue>
+
 
 QPixmap getRoundedPixmap(const QPixmap& src, int radius) {
     if (src.isNull()) return src;
@@ -50,6 +56,45 @@ QPixmap getRoundedPixmap(const QPixmap& src, int radius) {
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
+
+
+
+    // --- ИНИЦИАЛИЗАЦИЯ ПОТОКА ---
+    m_workerThread = new QThread(this);
+    m_worker = new FileWorker(); // Не передаем parent, так как он переедет в поток
+    m_worker->moveToThread(m_workerThread);
+
+    // Соединяем сигналы MainWindow с методами FileWorker
+    connect(this, &MainWindow::requestInstall, m_worker, &FileWorker::processInstallation);
+    connect(this, &MainWindow::requestRestore, m_worker, &FileWorker::processRestoration);
+
+    // Коннекты для РУЧНЫХ операций
+    connect(this, &MainWindow::requestManualSmartReplace, m_worker, &FileWorker::manualSmartReplace);
+    connect(this, &MainWindow::requestManualRestoreGunPacks, m_worker, &FileWorker::manualRestoreGunPacks);
+    connect(this, &MainWindow::requestManualInstallGunPacks, m_worker, &FileWorker::manualInstallGunPacks);
+    connect(this, &MainWindow::requestManualReplaceSounds, m_worker, &FileWorker::manualReplaceSounds);
+    connect(this, &MainWindow::requestManualRestoreSounds, m_worker, &FileWorker::manualRestoreSounds);
+
+    // Соединяем ответы FileWorker с интерфейсом
+    connect(m_worker, &FileWorker::statusUpdate, this, &MainWindow::onWorkerStatus);
+    connect(m_worker, &FileWorker::progressMessage, this, &MainWindow::onWorkerProgress);
+    connect(m_worker, &FileWorker::operationFinished, this, &MainWindow::onWorkerFinished);
+
+    // Очистка при завершении
+    connect(m_workerThread, &QThread::finished, m_worker, &QObject::deleteLater);
+
+    m_workerThread->start();
+    // --- КОНЕЦ ИНИЦИАЛИЗАЦИИ ПОТОКА ---
+
+
+    manager = new QNetworkAccessManager(this);
+    connect(manager, &QNetworkAccessManager::finished, this, &MainWindow::onResult);
+
+    QNetworkRequest request(QUrl("https://raw.githubusercontent.com/dima311313-boop/ReplaceX-for-GTA-V/ReplaceX/resources/donat,new.json"));
+    manager->get(request);
+
+
+
     loadSettings();
     QPixmap iconPixmap(":/izobr/IconG.png");
     int cornerRadius = 25; // Чем больше число, тем сильнее закругление
@@ -62,6 +107,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(checkTimer, &QTimer::timeout, this, &MainWindow::checkGtaProcess);
     checkTimer->start(3000); // Проверять раз в 3 секунды
 
+    ui->btnExitNF->setVisible(false);
+    ui->oknoNF->setVisible(false);
+    ui->btnNotification->setVisible(false);
     ui->oknoDiscleamer->setVisible(false);
     ui->oknoHDD->setVisible(false);
     ui->oknoKnopohki->setVisible(false);
@@ -112,7 +160,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     this->setFixedSize(646, 374);
 
-    qDebug() << "Программа запущенна. Версия 0.9.3(fix 02)";
+    qDebug() << "Программа запущенна.";
     ui->miniProgress->setText("Ожидание запуска игры");
     this->setWindowIcon(QIcon(":/izobr/photo_2026-01-15_107-25-59-round-corners.ico"));
     this->setWindowTitle("ReplaceX");
@@ -297,8 +345,72 @@ MainWindow::~MainWindow() {
     connect(ui->checkAutoLoadGP, &QCheckBox::toggled,
             this, &MainWindow::on_checkAutoLoadGP_toggled);
 
+    m_workerThread->quit();
+    m_workerThread->wait();
+
     delete ui;
 }
+const QString CURRENT_VERSION = "0.9.4"; //текущая версия
+
+void MainWindow::onResult(QNetworkReply *reply) {
+    if (reply->error() != QNetworkReply::NoError) {
+        qDebug() << "Сетевая ошибка:" << reply->errorString();
+        reply->deleteLater();
+        return;
+    }
+
+    QByteArray data = reply->readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+
+    // 1. Проверка на объект (теперь у нас корень - объект { })
+    if (!doc.isObject()) {
+        qDebug() << "Критическая ошибка: Ожидался JSON объект!";
+        reply->deleteLater();
+        return;
+    }
+
+    QJsonObject mainObj = doc.object();
+
+    // --- ЧАСТЬ 1: ДОНАТЕРЫ ---
+    QJsonArray donatorsArray = mainObj["donators"].toArray();
+    QString donatorsList = "Спасибо❤️: ";
+
+    for (const QJsonValue &value : donatorsArray) {
+        QJsonObject dObj = value.toObject();
+        donatorsList += dObj["name"].toString() + " - " + QString::number(dObj["amount"].toDouble()) + " руб, ";
+    }
+    donatorsList.chop(2);
+    ui->marqueeLabel->setText(donatorsList);
+
+    // --- ЧАСТЬ 2: ОБНОВЛЕНИЕ ---
+    QJsonObject updateObj = mainObj["update"].toObject();
+    QString remoteVersion = updateObj["version"].toString();
+    QString downloadUrl = updateObj["url"].toString();
+    QJsonArray changelogArray = updateObj["changelog"].toArray();
+    QString changelogText;
+    if (!changelogArray.isEmpty()) {
+        changelogText = "\n\nЧто нового:\n";
+        for (const QJsonValue &change : changelogArray) {
+            changelogText += "• " + change.toString() + "\n";
+        }
+    }
+
+    qDebug() << "Проверка версии. Сервер:" << remoteVersion << "Локальная:" << CURRENT_VERSION;
+
+    if (!remoteVersion.isEmpty() && remoteVersion != CURRENT_VERSION) {
+        qDebug() << "Доступна новая версия: " << CURRENT_VERSION;
+        ui->lblUpVer->setText("Новая версия: " + remoteVersion);
+        ui->lblSpisocIzm->setText(changelogText);
+        ui->btnNotification->setVisible(true);
+
+
+    }
+
+    reply->deleteLater();
+}
+
+
+
 //трей
 void MainWindow::changeEvent(QEvent *event) {
     if (event->type() == QEvent::WindowStateChange) {
@@ -401,37 +513,7 @@ bool MainWindow::isFileBusy(QString filePath) {
 
 
 // ГЛАВНЫЙ ФИКС: Функция умной замены с ретраями
-bool MainWindow::smartReplace(const QString &source, const QString &targetDir, const QString &targetFileName) {
-    if (source.isEmpty() || !QFile::exists(source)) return false;
 
-    QString fullDestPath = QDir::toNativeSeparators(targetDir + "/" + targetFileName);
-    QString nativeSource = QDir::toNativeSeparators(source);
-
-    // Если файлы идентичны — пропускаем
-    if (nativeSource.toLower() == fullDestPath.toLower()) return true;
-
-    // 10 попыток с задержкой 1 сек
-    for (int i = 0; i < 10; ++i) {
-        // Снимаем защиту
-        if (QFile::exists(fullDestPath)) {
-            SetFileAttributesW((LPCWSTR)fullDestPath.utf16(), FILE_ATTRIBUTE_NORMAL);
-            if (!QFile::remove(fullDestPath)) {
-                qDebug() << "Попытка " << i << ": Файл занят, ждем...";
-                QThread::msleep(1000);
-                continue;
-            }
-        }
-
-        // Копируем через WinAPI (более надежно для системных папок)
-        if (CopyFileW((LPCWSTR)nativeSource.utf16(), (LPCWSTR)fullDestPath.utf16(), FALSE)) {
-            qDebug() << "Успешно заменено: " << fullDestPath;
-            return true;
-        }
-
-        QThread::msleep(1000);
-    }
-    return false;
-}
 
 void MainWindow::killGtaEcosystem() {
     QStringList procs = {"GTA5.exe", "SocialClubHelper.exe", "Launcher.exe", "RockstarService.exe"};
@@ -467,84 +549,62 @@ bool MainWindow::isProcessRunning(const QString &exeName) {
 }
 
 
-
-
-
+FileWorker::Config MainWindow::getCurrentConfig() {
+    FileWorker::Config cfg;
+    cfg.reduxPath = ui->leditRedux->text();
+    cfg.originalPath = ui->leditOrig->text();
+    cfg.gameUpdatePath = ui->leditPapka->text();
+    cfg.gunPackSource = ui->leditGunPuck->text();
+    cfg.dlcPacksTarget = ui->leditDLS->text();
+    cfg.backupPath = QCoreApplication::applicationDirPath() + "/backups_gta";
+    cfg.soundModPath = ui->leditModZV->text();
+    cfg.sfxPath = ui->leditPapcaZV->text();
+    cfg.soundBackupPath = QCoreApplication::applicationDirPath() + "/sound_backup";
+    cfg.useRedux = ui->checkAutoLoad->isChecked();
+    cfg.useGunPack = ui->checkAutoLoadGP->isChecked();
+    cfg.useSounds = ui->checkAutoLoadZV->isChecked();
+    return cfg;
+}
 
 
 
 
 
 void MainWindow::checkProcessLoop() {
+    if (m_isOperationPending) return; // Не проверяем, пока идет копия
+
     bool isGameActive = isProcessRunning("gta5.exe");
 
-    // ИГРА ЗАПУСТИЛАСЬ
     if (isGameActive && !m_wasGameRunning) {
         m_wasGameRunning = true;
-        qDebug() << "Игра запущена. Установка модов...";
-        ui->miniProgress->setText("Игра запущена. Установка модов...");
-
-        // Ставим Redux
-        if (ui->checkAutoLoad->isChecked()) {
-            smartReplace(ui->leditRedux->text(), ui->leditPapka->text(), "update.rpf");
-            qDebug() << "Установка редукса";
-        }
-
-        // Ставим GunPacks
-        if (ui->checkAutoLoadGP->isChecked()) {
-            qDebug() << "Установка ган паков";
-            // Используем уже существующую функцию установки
-            on_btnReplaceGunPuck_clicked();
-
-        }
-
-        // Ставим Звуки
-        if (ui->checkAutoLoadZV->isChecked()) {
-            installSounds();
-            qDebug() << "Установка звуков";
-        }
+        m_isOperationPending = true;
+        emit requestInstall(getCurrentConfig());
     }
 
-    // ИГРА ЗАКРЫЛАСЬ
     if (!isGameActive && m_wasGameRunning) {
         m_wasGameRunning = false;
-        ui->miniProgress->setText("Игра закрыта. Возврат оригиналов...");
-
-        // Жестко закрываем процессы Rockstar (чтобы файлы не были заняты)
-        killGtaEcosystem();
-        QThread::msleep(3000); // Пауза, чтобы ОС отпустила файлы
-
-        // 1. Возвращаем оригинальный update.rpf
-        smartReplace(ui->leditOrig->text(), ui->leditPapka->text(), "update.rpf");
-
-        // 2. Возвращаем GunPacks
-        restoreGunPacks();
-
-        // 3. Возвращаем звуки
-        restoreSounds();
-        qDebug() << "Оригиналы возвращены.";
-        ui->miniProgress->setText("Оригиналы возвращены. Ожидание запуска...");
+        m_isOperationPending = true;
+        emit requestRestore(getCurrentConfig());
     }
 }
 
-
-void MainWindow::restoreAllBackups() {
-    QDir bDir(m_backupPath);
-    QFileInfoList files = bDir.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
-
-    for (const QFileInfo &f : files) {
-        // Восстанавливаем в папку DLC
-        if (smartReplace(f.absoluteFilePath(), ui->leditDLS->text(), f.fileName())) {
-            // Если восстановили — удаляем временный бэкап
-            QFile::remove(f.absoluteFilePath());
-        }
-    }
+// Обработчики ответов от потока
+void MainWindow::onWorkerStatus(QString status) {
+    ui->miniProgress->setText(status);
 }
 
+void MainWindow::onWorkerProgress(QString msg) {
+    qDebug() << "Worker:" << msg;
 
+}
 
-
-
+void MainWindow::onWorkerFinished(bool success, QString details) {
+    m_isOperationPending = false;
+    if (!success) {
+        qDebug() << "Ошибка операции:" << details;
+    }
+    ui->miniProgress->setText(details);
+}
 
 // --- ОБРАБОТЧИКИ КНОПОК ---
 
@@ -573,17 +633,15 @@ void MainWindow::on_btnPapka_clicked() {
 }
 
 void MainWindow::on_btnReplaceOrig_clicked() {
-    if (copyFileToGame(ui->leditOrig->text(), ui->leditPapka->text())) {
-        QMessageBox::critical(this, "Ошибка.", "Успех! Оригинал установлен.");
-        isReduxInstalled = false;
-    }
+    if (m_isOperationPending) return;
+    m_isOperationPending = true;
+    emit requestManualSmartReplace(ui->leditOrig->text(), ui->leditPapka->text(), "update.rpf");
 }
 
 void MainWindow::on_btnReplaceRedux_clicked() {
-    if (copyFileToGame(ui->leditRedux->text(), ui->leditPapka->text())) {
-        QMessageBox::information(this, "Ошибка.", "Успех! Редукс установлен.");
-        isReduxInstalled = true;
-    }
+    if (m_isOperationPending) return;
+    m_isOperationPending = true;
+    emit requestManualSmartReplace(ui->leditRedux->text(), ui->leditPapka->text(), "update.rpf");
 }
 
 void MainWindow::on_checkAutoLoad_toggled(bool checked) {
@@ -592,33 +650,40 @@ void MainWindow::on_checkAutoLoad_toggled(bool checked) {
         return;
     }
 
-    // Advanced Validation for Redux/Original paths
-    QFileInfo fiOrig(ui->leditOrig->text());
-    QFileInfo fiRedux(ui->leditRedux->text());
-    QDir dirGame(ui->leditPapka->text());
+    QString pathOrig = QDir::fromNativeSeparators(ui->leditOrig->text()).toLower();
+    QString pathPapka = QDir::fromNativeSeparators(ui->leditPapka->text()).toLower();
+    QString pathRedux = QDir::fromNativeSeparators(ui->leditRedux->text()).toLower();
 
-    bool isOrigOk = fiOrig.exists() && fiOrig.fileName().toLower() == "update.rpf";
-    bool isReduxOk = fiRedux.exists() && fiRedux.fileName().toLower() == "update.rpf";
-    bool isGameOk = dirGame.exists() && dirGame.dirName().toLower() == "update";
+    // 1. Проверка leditOrig: должен быть файл update.rpf
+    bool isOrigOk = pathOrig.endsWith("/update.rpf") && QFile::exists(pathOrig);
 
-    if (isOrigOk && isReduxOk && isGameOk) {
+    // 2. Проверка leditPapka: должна быть папка update на конце
+    // Удаляем лишние слэши в конце для точности
+    if (pathPapka.endsWith("/")) pathPapka.chop(1);
+    bool isPapkaOk = pathPapka.endsWith("/update") && QDir(pathPapka).exists();
+
+    // 3. Проверка leditRedux: должен быть update.rpf и не совпадать с оригиналом
+    bool isReduxOk = pathRedux.endsWith("/update.rpf") && QFile::exists(pathRedux);
+    bool isNotSame = (pathOrig != pathRedux);
+
+    if (isOrigOk && isPapkaOk && isReduxOk && isNotSame) {
         QSettings("MyCompany", "MyGameTool").setValue("Settings/AutoLoad", true);
-        qDebug() << "AutoLoad enabled successfully";
+        qDebug() << "AutoLoad успешно включен";
     } else {
-        // Block signals to prevent recursive toggle calls when resetting
         ui->checkAutoLoad->blockSignals(true);
         ui->checkAutoLoad->setChecked(false);
         ui->checkAutoLoad->blockSignals(false);
 
-        QStringList errorList;
-        if (!isGameOk) errorList << "Путь к папке игры (должна быть папка 'update')";
-        if (!isOrigOk) errorList << "Файл оригинала должен называться update.rpf и существовать";
-        if (!isReduxOk) errorList << "Файл редукса должен называться update.rpf и существовать";
+        QStringList errors;
+        if (!isOrigOk) errors << "- В поле 'Оригинал' должен быть выбран файл update.rpf";
+        if (!isPapkaOk) errors << "- В поле 'Папка игры' путь должен заканчиваться на папку 'update'";
+        if (!isReduxOk) errors << "- В поле 'Редукс' должен быть выбран файл update.rpf";
+        if (!isNotSame && !pathOrig.isEmpty()) errors << "- Пути Оригинала и Редукса не должны совпадать!";
 
-        QMessageBox::critical(this, "Ошибка валидации",
-                              "Невозможно включить автозагрузку. Проверьте:\n- " + errorList.join("\n- "));
+        QMessageBox::critical(this, "Ошибка валидации", "Некорректные пути:\n" + errors.join("\n"));
     }
 }
+
 void MainWindow::on_btnDonat_clicked() {
 
     QDesktopServices::openUrl(QUrl("https://www.donationalerts.com/r/kot6366363"));
@@ -758,6 +823,7 @@ void MainWindow::on_btnTelegram_clicked()
 //ган пак
 void MainWindow::on_btnOknoDop_clicked()
 {
+    ui->oknoNF->setVisible(false);
     if(oknoDop == true){
         //дисклеймер
         QRect startRect = ui->btnOknoDop->geometry();
@@ -924,125 +990,50 @@ void MainWindow::on_checkAutoLoadGP_toggled(bool checked) {
         return;
     }
 
-    QDir srcDir(ui->leditGunPuck->text());
-    QDir targetDir(ui->leditDLS->text());
+    QString pathDLS = QDir::fromNativeSeparators(ui->leditDLS->text()).toLower();
+    QString pathGunPack = QDir::fromNativeSeparators(ui->leditGunPuck->text()).toLower();
 
-    // Validation: The GunPack source MUST be a directory containing other directories (like patchday18ng)
-    // and it MUST NOT contain dlc.rpf directly (meaning the user selected a specific pack instead of the parent folder)
-    bool isSourceValid = srcDir.exists() && !srcDir.exists("dlc.rpf") && !srcDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty();
-    bool isTargetValid = targetDir.exists() && (targetDir.absolutePath().toLower().endsWith("/dlcpacks") || targetDir.absolutePath().toLower().endsWith("\\dlcpacks"));
+    if (pathDLS.endsWith("/")) pathDLS.chop(1);
+    if (pathGunPack.endsWith("/")) pathGunPack.chop(1);
 
-    if (isSourceValid && isTargetValid) {
-        QSettings settings("MyCompany", "MyGameTool");
-        settings.setValue("checkAutoLoadGP", true);
-        settings.setValue("pathGunPuck", ui->leditGunPuck->text());
-        settings.setValue("pathDLS", ui->leditDLS->text());
-        qDebug() << "GunPack AutoLoad enabled";
+    // 1. Проверка leditDLS: папка dlcpacks на конце
+    bool isDlsOk = pathDLS.endsWith("/dlcpacks") && QDir(pathDLS).exists();
+
+    // 2. Проверка leditGunPuck: отсутствие запрещенных имен в самом ПУТИ
+    bool pathHasForbidden = pathGunPack.contains("patchday18ng") || pathGunPack.contains("mpapartment");
+
+    // 3. Проверка содержимого папки GunPuck
+    QDir gpDir(pathGunPack);
+    bool hasRequiredContent = gpDir.exists("patchday18ng") || gpDir.exists("mpapartment");
+
+    if (isDlsOk && !pathHasForbidden && hasRequiredContent) {
+        // Проверка количества файлов для предупреждения
+        QStringList entries = gpDir.entryList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
+        if (entries.size() > 2) {
+            QMessageBox::warning(this, "Внимание", "В папке ганпаков больше 2-х файлов/папок. Убедитесь, что это не вызовет конфликтов.");
+        }
+
+        QSettings("MyCompany", "MyGameTool").setValue("checkAutoLoadGP", true);
     } else {
         ui->checkAutoLoadGP->blockSignals(true);
         ui->checkAutoLoadGP->setChecked(false);
         ui->checkAutoLoadGP->blockSignals(false);
 
-        QString errorDetail;
-        if (!targetDir.exists()) errorDetail = "Целевая папка dlcpacks не найдена.";
-        else if (!isTargetValid) errorDetail = "Целевая папка должна заканчиваться на /dlcpacks.";
-        else if (srcDir.exists("dlc.rpf")) errorDetail = "Вы выбрали папку конкретного ганпака (внутри есть dlc.rpf). \nВыберите РОДИТЕЛЬСКУЮ папку, где лежат все папки ганпаков (patchdayX и т.д.).";
-        else if (srcDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty()) errorDetail = "Выбранная папка с ганпаками пуста.";
-        else errorDetail = "Проверьте правильность путей к ганпакам.";
+        QStringList errors;
+        if (!isDlsOk) errors << "- Путь DLS должен заканчиваться на 'dlcpacks'";
+        if (pathHasForbidden) errors << "- В самом пути к ганпакам не должно быть имен 'patchday18ng' или 'mpapartment'";
+        if (!hasRequiredContent) errors << "- Внутри выбранной папки должна быть папка 'patchday18ng' или 'mpapartment'";
 
-        QMessageBox::warning(this, "Ошибка настройки GunPack", errorDetail);
+        QMessageBox::critical(this, "Ошибка GunPack", "Проверьте условия:\n" + errors.join("\n"));
     }
 }
 
 
 
-void MainWindow::on_btnReplaceGunPuck_clicked()
-{
-    if (m_gunPackSourcePath.isEmpty() || m_dlcPacksTargetPath.isEmpty()) {
-        QMessageBox::warning(this, "Ошибка", "Не указаны пути к источникам или цели!");
-        return;
-    }
-
-    QDir sourceDir(m_gunPackSourcePath);
-    QDir targetDir(m_dlcPacksTargetPath);
-
-    int successCount = 0;
-    int failCount = 0;
-
-    // Получаем список элементов для копирования
-    QFileInfoList items = sourceDir.entryInfoList(
-        QDir::AllEntries | QDir::NoDotAndDotDot,
-        QDir::Name
-        );
-
-    foreach (const QFileInfo &item, items) {
-        QString sourceItem = item.absoluteFilePath();
-        QString targetItem = targetDir.absoluteFilePath(item.fileName());
-
-        // 1. Если целевая сущность существует — делаем бэкап
-        if (QFile::exists(targetItem) || QDir(targetItem).exists()) {
-            QString backupItem = m_backupPath + "/" + item.fileName();
-
-            // Удаляем старый бэкап, если есть
-            if (QFile::exists(backupItem)) {
-                QFile::remove(backupItem);
-            } else if (QDir(backupItem).exists()) {
-                QDir(backupItem).removeRecursively();
-            }
-
-            // Копируем в бэкап
-            if (item.isDir()) {
-                if (!copyDirectory(targetItem, backupItem)) {
-                    failCount++;
-                    continue;
-                }
-            } else {
-                if (!QFile::copy(targetItem, backupItem)) {
-                    failCount++;
-                    continue;
-                }
-            }
-
-            // Запоминаем путь к бэкапу
-            m_backupMap[targetItem] = backupItem;
-        }
-
-        // 2. Удаляем целевую сущность (если есть)
-        if (QFile::exists(targetItem)) {
-            QFile::remove(targetItem);
-        } else if (QDir(targetItem).exists()) {
-            QDir(targetItem).removeRecursively();
-        }
-
-        // 3. Копируем из источника в цель
-        if (item.isDir()) {
-            if (copyDirectory(sourceItem, targetItem)) {
-                successCount++;
-            } else {
-                failCount++;
-            }
-        } else {
-            if (QFile::copy(sourceItem, targetItem)) {
-                successCount++;
-            } else {
-                failCount++;
-            }
-        }
-    }
-    if (failCount == 0){
-    qDebug() << "Успех";
-    }
-    else{
-        qDebug() << "О.1.2.b03";
-    }
-    /* Уведомление
-    if (failCount == 0) {
-        QMessageBox::information(this, "Бэкап и копирование",
-                                 QString("Скопировано: %1\nБэкапы созданы").arg(successCount));
-    } else {
-        QMessageBox::warning(this, "Ошибки",
-                             QString("Успешно: %1\nС ошибками: %2").arg(successCount).arg(failCount));
-    } */
+void MainWindow::on_btnReplaceGunPuck_clicked() {
+    if (m_isOperationPending) return;
+    m_isOperationPending = true;
+    emit requestManualInstallGunPacks(getCurrentConfig());
 }
 
 
@@ -1072,93 +1063,12 @@ bool MainWindow::copyDirectory(const QString &sourceDir, const QString &targetDi
     return true;
 }
 
-void MainWindow::on_btnReplaceOrigGP_clicked()
-{
-    qDebug() << ">>> Ручное восстановление оригиналов GunPack...";
-
-    if (m_dlcPacksTargetPath.isEmpty()) {
-        QMessageBox::warning(this, "Ошибка", "Не указан путь к папке dlcpacks игры!");
-        return;
-    }
-
-    // Вызываем общую функцию восстановления
-    if (restoreGunPacks()) {
-        QMessageBox::information(this, "Успех", "Оригинальные GunPack восстановлены, бэкапы очищены.");
-    } else {
-        QMessageBox::warning(this, "Внимание", "Не все файлы удалось восстановить. Убедитесь, что игра закрыта.");
-    }
+void MainWindow::on_btnReplaceOrigGP_clicked() {
+    if (m_isOperationPending) return;
+    m_isOperationPending = true;
+    emit requestManualRestoreGunPacks(getCurrentConfig());
 }
-bool MainWindow::installGunPacks() {
-    if (m_gunPackSourcePath.isEmpty() || m_dlcPacksTargetPath.isEmpty())
-        return false;
 
-    QDir sourceDir(m_gunPackSourcePath);
-    QDir targetDir(m_dlcPacksTargetPath);
-
-    int successCount = 0;
-    int failCount = 0;
-
-    QFileInfoList items = sourceDir.entryInfoList(
-        QDir::AllEntries | QDir::NoDotAndDotDot,
-        QDir::Name
-        );
-
-    foreach (const QFileInfo &item, items) {
-        QString sourceItem = item.absoluteFilePath();
-        QString targetItem = targetDir.absoluteFilePath(item.fileName());
-
-        // 1. Бэкап существующего файла/папки в целевой директории
-        if (QFile::exists(targetItem) || QDir(targetItem).exists()) {
-            QString backupItem = m_backupPath + "/" + item.fileName();
-
-            // Удаляем старый бэкап, если есть
-            if (QFile::exists(backupItem)) {
-                QFile::remove(backupItem);
-            } else if (QDir(backupItem).exists()) {
-                QDir(backupItem).removeRecursively();
-            }
-
-            // Копируем в бэкап
-            if (item.isDir()) {
-                if (!copyDirectory(targetItem, backupItem)) {
-                    failCount++;
-                    continue;
-                }
-            } else {
-                if (!QFile::copy(targetItem, backupItem)) {
-                    failCount++;
-                    continue;
-                }
-            }
-
-            m_backupMap[targetItem] = backupItem;
-        }
-
-        // 2. Удаляем целевую сущность (если есть)
-        if (QFile::exists(targetItem)) {
-            QFile::remove(targetItem);
-        } else if (QDir(targetItem).exists()) {
-            QDir(targetItem).removeRecursively();
-        }
-
-        // 3. Копируем из источника в цель
-        if (item.isDir()) {
-            if (copyDirectory(sourceItem, targetItem)) {
-                successCount++;
-            } else {
-                failCount++;
-            }
-        } else {
-            if (QFile::copy(sourceItem, targetItem)) {
-                successCount++;
-            } else {
-                failCount++;
-            }
-        }
-    }
-
-    return (failCount == 0);
-}
 bool MainWindow::removeWithRetry(const QString &path, int maxAttempts) {
     QDir dir(path);
     for (int i = 0; i < maxAttempts; ++i) {
@@ -1546,138 +1456,35 @@ void MainWindow::on_btnPapkaZV_clicked() {
 
 
 void MainWindow::on_btnReplaceModZV_clicked() {
-    qDebug() << "=== Установка мод‑файлов .rpf ===";
-
-    if (m_modSoundPath.isEmpty() || m_x64AudioSfxPath.isEmpty()) {
-        QMessageBox::critical(this, "Ошибка", "Укажите пути к модам и папке x64\\audio\\sfx.");
-        return;
-    }
-
-    if (!QDir(m_modSoundPath).exists() || !QDir(m_x64AudioSfxPath).exists()) {
-        QMessageBox::critical(this, "Ошибка", "Папки не найдены.");
-        return;
-    }
-
-    QDir modDir(m_modSoundPath);
-    QStringList modFiles = modDir.entryList(
-        QStringList() << "*.rpf",
-        QDir::Files
-        );
-
-    if (modFiles.isEmpty()) {
-        QMessageBox::warning(this, "Нет файлов", "В папке модов нет файлов .rpf.");
-        return;
-    }
-
-    // Бэкап оригиналов
-    m_soundBackupDir = QCoreApplication::applicationDirPath() + "/sound_backup";
-    QDir().mkpath(m_soundBackupDir);
-
-    if (!backupOriginalRpfFiles(modFiles)) {
-        QMessageBox::critical(this, "Ошибка", "Не удалось создать бэкап.");
-        return;
-    }
-
-    // Копирование модов
-    if (copyRpfFiles(m_modSoundPath, m_x64AudioSfxPath)) {
-        QMessageBox::information(this, "Готово", "Моды установлены!");
-    } else {
-        QMessageBox::critical(this, "Ошибка", "Установка не удалась.");
-    }
+    if (m_isOperationPending) return;
+    m_isOperationPending = true;
+    emit requestManualReplaceSounds(getCurrentConfig());
 }
-
-
 
 void MainWindow::on_btnReplaceOrigZV_clicked() {
-    qDebug() << "=== Безопасное восстановление оригиналов ===";
-
-    if (m_x64AudioSfxPath.isEmpty()) {
-        QMessageBox::critical(this, "Ошибка", "Укажите папку x64\\audio\\sfx.");
-        return;
-    }
-
-    m_soundBackupDir = QCoreApplication::applicationDirPath() + "/sound_backup";
-    if (!QDir(m_soundBackupDir).exists()) {
-        QMessageBox::warning(this, "Нет бэкапа", "Папка sound_backup не найдена.");
-        return;
-    }
-
-    QDir bkpDir(m_soundBackupDir);
-    QFileInfoList files = bkpDir.entryInfoList(QStringList() << "*.rpf", QDir::Files);
-
-    if (files.isEmpty()) {
-        QMessageBox::warning(this, "Бэкап пуст", "В sound_backup нет файлов .rpf.");
-        return;
-    }
-
-    int restored = 0;
-    foreach (const QFileInfo &file, files) {
-        QString srcPath = file.absoluteFilePath();
-        QString destPath = m_x64AudioSfxPath + "/" + file.fileName();
-
-        // 1. Удаляем существующий файл (если есть)
-        if (QFile::exists(destPath)) {
-            if (!QFile::remove(destPath)) {
-                qDebug() << "Не удалось удалить для замены:" << destPath;
-                continue;
-            }
-        }
-
-        // 2. Копируем оригинал из бэкапа
-        if (QFile::copy(srcPath, destPath)) {
-            restored++;
-            qDebug() << "Восстановлен:" << file.fileName();
-        } else {
-            qDebug() << "Ошибка восстановления:" << srcPath;
-        }
-    }
-
-    // 3. Анализ результата и удаление бэкапа (если всё прошло успешно)
-    if (restored == files.size()) {
-        // Все файлы восстановлены — удаляем папку бэкапа
-        bool backupRemoved = QDir(m_soundBackupDir).removeRecursively();
-        if (backupRemoved) {
-            qDebug() << "Папка бэкапа удалена:" << m_soundBackupDir;
-            QMessageBox::information(
-                this, "Готово",
-                QString("Восстановлено %1 файлов. Папка бэкапа удалена.").arg(restored)
-                );
-        } else {
-            qDebug() << "Не удалось удалить папку бэкапа:" << m_soundBackupDir;
-            QMessageBox::warning(
-                this, "Предупреждение",
-                QString("Восстановлено %1 файлов, но папку бэкапа не удалось удалить вручную.").arg(restored)
-                );
-        }
-    } else {
-        // Часть файлов не восстановилась — оставляем бэкап для повторной попытки
-        QMessageBox::warning(
-            this, "Частичное восстановление",
-            QString("Восстановлено %1 из %2 файлов. Папка бэкапа сохранена для повторной попытки.")
-                .arg(restored).arg(files.size())
-            );
-    }
-
-    qDebug() << "Восстановление завершено. Восстановлено:" << restored;
+    if (m_isOperationPending) return;
+    m_isOperationPending = true;
+    emit requestManualRestoreSounds(getCurrentConfig());
 }
-
 
 bool MainWindow::copyRpfFiles(const QString &sourceDir, const QString &targetDir) {
     QDir srcDir(sourceDir);
     QStringList files = srcDir.entryList(QStringList() << "*.rpf", QDir::Files);
 
     foreach (const QString &fileName, files) {
-        QString sourcePath = srcDir.absoluteFilePath(fileName);
-        QString targetPath = targetDir + "/" + fileName;
+        QString sourcePath = QDir::toNativeSeparators(srcDir.absoluteFilePath(fileName));
+        QString targetPath = QDir::toNativeSeparators(targetDir + "/" + fileName);
 
-        // Удаляем существующий файл (если есть)
+        // Снимаем защиту с целевого файла, если он существует
         if (QFile::exists(targetPath)) {
-            QFile::remove(targetPath);
+            SetFileAttributesW((LPCWSTR)targetPath.utf16(), FILE_ATTRIBUTE_NORMAL);
+            DeleteFileW((LPCWSTR)targetPath.utf16()); // Удаляем через WinAPI для надежности
         }
 
-        // Копируем файл
-        if (!QFile::copy(sourcePath, targetPath)) {
-            qDebug() << ">>> ОШИБКА: Не удалось скопировать файл:" << sourcePath << "в" << targetPath;
+        // Копируем через WinAPI
+        if (!CopyFileW((LPCWSTR)sourcePath.utf16(), (LPCWSTR)targetPath.utf16(), FALSE)) {
+            DWORD err = GetLastError();
+            qDebug() << ">>> ОШИБКА WinAPI при копировании звука:" << fileName << "Код ошибки:" << err;
             return false;
         }
     }
@@ -1692,20 +1499,22 @@ bool MainWindow::backupOriginalRpfFiles(const QStringList &modFiles) {
     QDir targetDir(m_x64AudioSfxPath);
 
     foreach (const QString &fileName, modFiles) {
-        QString originalPath = targetDir.absoluteFilePath(fileName);
-        QString backupPath = m_soundBackupDir + "/" + fileName;
+        QString originalPath = QDir::toNativeSeparators(targetDir.absoluteFilePath(fileName));
+        QString backupPath = QDir::toNativeSeparators(m_soundBackupDir + "/" + fileName);
 
         if (QFile::exists(originalPath)) {
-            // Удаляем старый бэкап, если есть
+            // Если бэкап уже есть, подготавливаем его к перезаписи
             if (QFile::exists(backupPath)) {
-                QFile::remove(backupPath);
+                SetFileAttributesW((LPCWSTR)backupPath.utf16(), FILE_ATTRIBUTE_NORMAL);
+                DeleteFileW((LPCWSTR)backupPath.utf16());
             }
 
-            // Копируем оригинал в бэкап
-            if (!QFile::copy(originalPath, backupPath)) {
-                qDebug() << ">>> ОШИБКА: Не удалось создать бэкап файла:" << originalPath;
+            // Копируем оригинал в бэкап через WinAPI
+            if (!CopyFileW((LPCWSTR)originalPath.utf16(), (LPCWSTR)backupPath.utf16(), FALSE)) {
+                qDebug() << ">>> ОШИБКА бэкапа звука:" << fileName << "Error:" << GetLastError();
                 return false;
             }
+            qDebug() << ">>> Бэкап создан:" << fileName;
         }
     }
     return true;
@@ -1762,28 +1571,39 @@ void MainWindow::on_checkAutoLoadZV_toggled(bool checked) {
         return;
     }
 
-    QString pathMod = QDir::fromNativeSeparators(ui->leditModZV->text());
-    QString pathSfx = QDir::fromNativeSeparators(ui->leditPapcaZV->text());
+    QString pathSfx = QDir::fromNativeSeparators(ui->leditPapcaZV->text()).toLower();
+    QString pathModZV = QDir::fromNativeSeparators(ui->leditModZV->text()).toLower(); // Папка с модами звуков
 
-    QDir modDir(pathMod);
-    QDir sfxDir(pathSfx);
+    if (pathSfx.endsWith("/")) pathSfx.chop(1);
+    if (pathModZV.endsWith("/")) pathModZV.chop(1);
 
-    bool hasModFiles = modDir.exists() && !modDir.entryList(QStringList() << "*.rpf", QDir::Files).isEmpty();
-    bool isSfxFolder = sfxDir.exists() && sfxDir.absolutePath().toLower().endsWith("/sfx");
+    // 1. Проверка leditPapcaZV: папка sfx на конце
+    bool isSfxOk = pathSfx.endsWith("/sfx") && QDir(pathSfx).exists();
 
-    if (hasModFiles && isSfxFolder) {
+    // 2. Проверка папки с модами (откуда берем RESIDENT.rpf и т.д.)
+    QDir modDir(pathModZV);
+    bool hasResident = modDir.exists("RESIDENT.rpf");
+    bool hasWeapons = modDir.exists("WEAPONS_PLAYER.rpf");
+    bool hasZVOu = hasResident || hasWeapons;
+
+    if (isSfxOk && hasZVOu) {
+        // Предупреждение о количестве файлов
+        QStringList entries = modDir.entryList(QDir::Files | QDir::NoDotAndDotDot);
+        if (entries.size() > 2) {
+            QMessageBox::warning(this, "Внимание", "В папке звуков больше 2-х файлов. Программа заменит только нужные .rpf файлы.");
+        }
+
         QSettings("MyCompany", "MyGameTool").setValue("checkAutoLoadZV", true);
     } else {
         ui->checkAutoLoadZV->blockSignals(true);
         ui->checkAutoLoadZV->setChecked(false);
         ui->checkAutoLoadZV->blockSignals(false);
 
-        QString error;
-        if (!isSfxFolder) error = "Путь к папке звуков игры должен заканчиваться на /sfx";
-        else if (!modDir.exists()) error = "Папка с модами звуков не существует.";
-        else error = "В папке модов не найдено ни одного .rpf файла.";
+        QStringList errors;
+        if (!isSfxOk) errors << "- Путь к папке игры должен заканчиваться на 'sfx'";
+        if (!hasZVOu) errors << "- В папке модов не найдены RESIDENT.rpf или WEAPONS_PLAYER.rpf";
 
-        QMessageBox::warning(this, "Ошибка звуков", error);
+        QMessageBox::critical(this, "Ошибка звуков", "Проверьте пути звуков:\n" + errors.join("\n"));
     }
 }
 
@@ -1845,56 +1665,43 @@ bool MainWindow::safeCopy(const QString &src, const QString &destFolder, bool is
 
 
 bool MainWindow::restoreSounds() {
-    if (m_x64AudioSfxPath.isEmpty())
-        return false;
+    if (m_x64AudioSfxPath.isEmpty()) return false;
 
     m_soundBackupDir = QCoreApplication::applicationDirPath() + "/sound_backup";
-    if (!QDir(m_soundBackupDir).exists())
-        return false;
-
     QDir bkpDir(m_soundBackupDir);
+    if (!bkpDir.exists()) return true;
+
     QFileInfoList files = bkpDir.entryInfoList(QStringList() << "*.rpf", QDir::Files);
+    if (files.isEmpty()) return true;
 
-    if (files.isEmpty())
-        return true; // Бэкапов нет — считаем, что всё ок
-
-    int restoredCount = 0;
     int failCount = 0;
 
     foreach (const QFileInfo &fileInfo, files) {
-        QString backupPath = fileInfo.absoluteFilePath();
-        QString targetPath = m_x64AudioSfxPath + "/" + fileInfo.fileName();
+        QString backupPath = QDir::toNativeSeparators(fileInfo.absoluteFilePath());
+        QString targetPath = QDir::toNativeSeparators(m_x64AudioSfxPath + "/" + fileInfo.fileName());
 
-        // Удаляем текущий файл (если есть)
+        // Снимаем защиту с модового файла в папке игры
         if (QFile::exists(targetPath)) {
-            if (!QFile::remove(targetPath)) {
-                qDebug() << ">>> ОШИБКА: Не удалось удалить файл при восстановлении:" << targetPath;
+            SetFileAttributesW((LPCWSTR)targetPath.utf16(), FILE_ATTRIBUTE_NORMAL);
+            if (!DeleteFileW((LPCWSTR)targetPath.utf16())) {
+                qDebug() << ">>> ОШИБКА WinAPI: Не удалось удалить модовый звук:" << GetLastError();
                 failCount++;
                 continue;
             }
         }
 
-        // Копируем из бэкапа
-        if (QFile::copy(backupPath, targetPath)) {
-            restoredCount++;
-        } else {
-            qDebug() << ">>> ОШИБКА: Не удалось восстановить файл:" << backupPath << "в" << targetPath;
+        // Возвращаем чистый файл из бэкапа
+        if (!CopyFileW((LPCWSTR)backupPath.utf16(), (LPCWSTR)targetPath.utf16(), FALSE)) {
+            qDebug() << ">>> ОШИБКА WinAPI при возврате звука:" << GetLastError();
             failCount++;
         }
     }
 
-    // Если всё успешно — удаляем папку бэкапов
     if (failCount == 0) {
-        QDir backupDir(m_soundBackupDir);
-        backupDir.removeRecursively();
-        qDebug() << ">>> Все звуки восстановлены. Бэкапы очищены.";
+        QDir(m_soundBackupDir).removeRecursively();
         return true;
-    } else {
-        qDebug() << ">>> Восстановление звуков с ошибками: успешно" << restoredCount
-                 << ", ошибок" << failCount
-                 << ". Бэкапы сохранены для повторной попытки.";
-        return false;
     }
+    return false;
 }
 //HDD
 void MainWindow::on_btnHDD_OpenDis_clicked()
@@ -1961,7 +1768,6 @@ void MainWindow::on_btnNext_clicked()
     ui->Instruction->setVisible(false);
     ui->btnNext->setVisible(false);
     ui->lblInstrucktion->setVisible(false);
-    ui->lblZader->setVisible(false);
 }
 
 void MainWindow::on_btnSaveTime_clicked()
@@ -2015,23 +1821,27 @@ void MainWindow::saveTimeToFile() {
     QString content = file.readAll();
     file.close();
 
-    // Регулярка теперь ищет "timeout /t " и ЗАПОМИНАЕТ цифры после него
-    // Используем захват группы, чтобы заменить только число
+    // РЕШЕНИЕ: Используем QRegularExpression для поиска первого вхождения
     QRegularExpression re("(timeout /t )(\\d+)");
     QRegularExpressionMatch match = re.match(content);
 
     if (match.hasMatch()) {
-        // Заменяем всё найденное на: "timeout /t " + новое_время
-        content.replace(re, match.captured(1) + newTime);
-        qDebug() << "Время заменено на:" << newTime;
-    } else {
-        qWarning() << "Строка 'timeout /t' не найдена.";
+        // Мы НЕ используем content.replace(re, ...), так как это заменит ВСЕ вхождения.
+        // Вместо этого мы берем позицию и длину ТОЛЬКО первого числа (группа 2).
+        int start = match.capturedStart(2);
+        int length = match.capturedLength(2);
+
+        // Заменяем только этот сегмент строки
+        content.replace(start, length, newTime);
+        qDebug() << "Обновлено время на:" << newTime;
     }
 
     if (file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
         QTextStream out(&file);
         out << content;
         file.close();
+
+        // Unblock file for execution
         QString powerShellCmd = "powershell -Command \"Unblock-File -Path '" + filePath + "'\"";
         QProcess::execute(powerShellCmd);
     }
@@ -2101,4 +1911,69 @@ bool MainWindow::isValidRpfPath(const QString &filePath) {
     if (filePath.isEmpty()) return false;
     QFileInfo fi(filePath);
     return fi.exists() && fi.fileName().toLower() == "update.rpf";
+}
+//Notif
+void MainWindow::on_btnNotification_clicked()
+{
+    ui->btnExitNF->setVisible(true);
+
+    QRect startRectNF = ui->btnNotification->geometry();
+    QRect endRectNF = ui->oknoNF->geometry();
+
+    ui->oknoNF->setGeometry(startRectNF);
+    ui->oknoNF->setVisible(true);
+
+    QPropertyAnimation *anim00 = new QPropertyAnimation(ui->oknoNF, "geometry");
+    anim00->setDuration(400);
+    anim00->setStartValue(startRectNF);
+    anim00->setEndValue(endRectNF);
+    anim00->setEasingCurve(QEasingCurve::OutCubic);
+    anim00->start(QPropertyAnimation::DeleteWhenStopped);
+
+
+    QGraphicsOpacityEffect *eff88 = new QGraphicsOpacityEffect(this);
+    ui->oknoNF->setGraphicsEffect(eff88);
+    ui->oknoNF->setVisible(true);
+
+    QPropertyAnimation *zov = new QPropertyAnimation(eff88, "opacity");
+    zov->setDuration(50); // длительность в мс
+    zov->setStartValue(0);
+    zov->setEndValue(1);
+    zov->setEasingCurve(QEasingCurve::InBack); // тип сглаживания
+    zov->start(QPropertyAnimation::DeleteWhenStopped);
+
+    //закрыть окно
+    QRect startRectKLS = ui->btnNotification->geometry();
+    QRect endRectKLS = ui->btnExitNF->geometry();
+
+    ui->btnExitNF->setGeometry(startRectKLS);
+    ui->btnExitNF->setVisible(true);
+
+    QPropertyAnimation *anim333 = new QPropertyAnimation(ui->btnExitNF, "geometry");
+    anim333->setDuration(400);
+    anim333->setStartValue(startRectKLS);
+    anim333->setEndValue(endRectKLS);
+    anim333->setEasingCurve(QEasingCurve::OutCubic);
+    anim333->start(QPropertyAnimation::DeleteWhenStopped);
+
+
+    QGraphicsOpacityEffect *eff99 = new QGraphicsOpacityEffect(this);
+    ui->btnExitNF->setGraphicsEffect(eff99);
+    ui->btnExitNF->setVisible(true);
+
+    QPropertyAnimation *p = new QPropertyAnimation(eff99, "opacity");
+    p->setDuration(50); // длительность в мс
+    p->setStartValue(0);
+    p->setEndValue(1);
+    p->setEasingCurve(QEasingCurve::InBack); // тип сглаживания
+    p->start(QPropertyAnimation::DeleteWhenStopped);
+}
+void MainWindow::on_btnDownload_clicked()
+{
+    QDesktopServices::openUrl(QUrl("https://majestic-mods.ru/load/soft/replacex_0_9_0_beta/14-1-0-192"));
+}
+void MainWindow::on_btnExitNF_clicked()
+{
+    ui->oknoNF->setVisible(false);
+    ui->btnExitNF->setVisible(false);
 }

@@ -1265,31 +1265,6 @@ QPushButton:pressed {
     <property name="frameShadow">
      <enum>QFrame::Shadow::Raised</enum>
     </property>
-    <widget class="QLabel" name="label_6">
-     <property name="geometry">
-      <rect>
-       <x>120</x>
-       <y>0</y>
-       <width>241</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <family>Source Code Pro</family>
-       <pointsize>10</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">QLabel {
-    color: #FFF5EE; /* SeaShell - чуть теплее, кремовый */
-}</string>
-     </property>
-     <property name="text">
-      <string>Установить новые звуки оружия</string>
-     </property>
-    </widget>
     <widget class="QLabel" name="lblAutoGP_4">
      <property name="geometry">
       <rect>
@@ -1565,7 +1540,6 @@ QPushButton:pressed {
      </property>
     </widget>
     <zorder>listView_5</zorder>
-    <zorder>label_6</zorder>
     <zorder>lblAutoGP_4</zorder>
     <zorder>checkAutoOn_Off</zorder>
     <zorder>groupBox_7</zorder>
@@ -1576,7 +1550,212 @@ QPushButton:pressed {
     <zorder>lblInstrucktion</zorder>
     <zorder>lblZader</zorder>
    </widget>
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
+     <rect>
+      <x>490</x>
+      <y>360</y>
+      <width>71</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Berlin Sans FB</family>
+      <pointsize>8</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>ReplaceX 0.9.4 </string>
+    </property>
+   </widget>
+   <widget class="MarqueeLabel" name="marqueeLabel">
+    <property name="geometry">
+     <rect>
+      <x>500</x>
+      <y>50</y>
+      <width>141</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Unispace</family>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnNotification">
+    <property name="geometry">
+     <rect>
+      <x>610</x>
+      <y>130</y>
+      <width>41</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="icon">
+     <iconset resource="resursi.qrc">
+      <normaloff>:/izobr/8022702-removebg-preview.png</normaloff>:/izobr/8022702-removebg-preview.png</iconset>
+    </property>
+    <property name="iconSize">
+     <size>
+      <width>40</width>
+      <height>40</height>
+     </size>
+    </property>
+   </widget>
+   <widget class="QFrame" name="oknoNF">
+    <property name="geometry">
+     <rect>
+      <x>450</x>
+      <y>70</y>
+      <width>151</width>
+      <height>201</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Shape::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Shadow::Raised</enum>
+    </property>
+    <widget class="QListView" name="listView_3">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>151</width>
+       <height>201</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QListWidget, QListView {
+    background-color: #1e1e1e; /* Темный цвет фона */
+    border: 1px solid white;   /* Белая обводка толщиной 1 пиксель */
+    color: white;              /* Убедимся, что текст внутри тоже белый */
+    padding: 5px;              /* Небольшой отступ внутри рамки */
+}</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_6">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>131</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Berlin Sans FB</family>
+       <pointsize>8</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Доступно обновление</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnDownload">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>170</y>
+       <width>101</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>8</pointsize>
+       <italic>true</italic>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Скачать</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="lblUpVer">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>20</y>
+       <width>131</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QLabel" name="lblSpisocIzm">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>20</y>
+       <width>131</width>
+       <height>141</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>8</pointsize>
+       <italic>true</italic>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">
+</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <zorder>listView_3</zorder>
+    <zorder>btnDownload</zorder>
+    <zorder>lblUpVer</zorder>
+    <zorder>lblSpisocIzm</zorder>
+    <zorder>label_6</zorder>
+   </widget>
+   <widget class="QPushButton" name="btnExitNF">
+    <property name="geometry">
+     <rect>
+      <x>580</x>
+      <y>70</y>
+      <width>21</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="icon">
+     <iconset theme="QIcon::ThemeIcon::ApplicationExit"/>
+    </property>
+   </widget>
    <zorder>lblLogotip</zorder>
+   <zorder>marqueeLabel</zorder>
+   <zorder>label_2</zorder>
    <zorder>btnReplaceOrig</zorder>
    <zorder>btnReplaceRedux</zorder>
    <zorder>checkAutoLoad</zorder>
@@ -1595,11 +1774,21 @@ QPushButton:pressed {
    <zorder>oknoKnopohki</zorder>
    <zorder>oknoDiscleamer</zorder>
    <zorder>oknoZV</zorder>
-   <zorder>oknoHDD</zorder>
    <zorder>oknoGP</zorder>
+   <zorder>btnNotification</zorder>
+   <zorder>oknoNF</zorder>
+   <zorder>btnExitNF</zorder>
+   <zorder>oknoHDD</zorder>
    <zorder>btnExitGP</zorder>
   </widget>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>MarqueeLabel</class>
+   <extends>QLabel</extends>
+   <header>marqueelabel.h</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="resursi.qrc"/>
  </resources>

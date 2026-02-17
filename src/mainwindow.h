@@ -11,15 +11,18 @@
 #include <QGraphicsOpacityEffect>
 #include <QPropertyAnimation>
 #include <QEvent>
-#include <filecopier.h>
 #include <QProcess>
+#include <QThread>
+#include <QNetworkAccessManager>
+#include <QPainter>
+#include "fileworker.h"
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
 }
 QT_END_NAMESPACE
-
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -31,11 +34,24 @@ public:
 private:
     Ui::MainWindow *ui;
 
+    // Поток и рабочий
+    QThread *m_workerThread;
+    FileWorker *m_worker;
+
+    // Переменные состояния
+    bool m_isOperationPending = false; // Чтобы не запускать копирование дважды
+
+    // Утилиты
+    FileWorker::Config getCurrentConfig();
+
+    void setupSmoothMarquee(QString text);
+
+    QNetworkAccessManager *manager;
     const int MAX_RESTORE_ATTEMPTS = 5;      //Максимальное число попыток
     const int BASE_DELAY_MS = 2000;       //Базовая задержка между попытками (2 сек)
     const int INCREASE_DELAY_MS = 1000;  //Увеличение задержки на каждую попытку
 
-
+    QLabel *marqueeLabel;
     // === UI-элементы ===
     QLabel *infoPopup;                  //Всплывающее окошко с подсказкой
     QGraphicsOpacityEffect *popupOpacity; //Эффект прозрачности для анимации
@@ -75,7 +91,7 @@ private:
     void restoreAllBackups();
     bool m_wasGameRunning = false;
 
-
+    void checkUpdates();
 
     // === Флаги состояния ===
     bool isSoundsInstalled = false;    //Установлены ли звуки
@@ -114,6 +130,18 @@ private:
     bool oknoDop = true;
     bool safeCopy(const QString &src, const QString &destFolder, bool isRestoring);
 
+signals:
+    // Сигналы для управления рабочим потоком
+    void requestInstall(FileWorker::Config config);
+    void requestRestore(FileWorker::Config config);
+
+    // Сигналы для РУЧНОГО режима (выполняются в FileWorker)
+    void requestManualSmartReplace(QString source, QString targetDir, QString targetFileName);
+    void requestManualRestoreGunPacks(FileWorker::Config config);
+    void requestManualInstallGunPacks(FileWorker::Config config);
+    void requestManualReplaceSounds(FileWorker::Config config);
+    void requestManualRestoreSounds(FileWorker::Config config);
+
 protected:
     //События Qt
     void changeEvent(QEvent *event) override;
@@ -121,6 +149,12 @@ protected:
 
 
 private slots:
+    // Слоты для получения ответов от рабочего
+    void onWorkerFinished(bool success, QString details);
+    void onWorkerStatus(QString status);
+    void onWorkerProgress(QString msg);
+
+
     //Кнопочки
     void on_btnAddRedux_clicked();      // Кнопка: выбрать редукс
     void on_btnAddOrig_clicked();       // Кнопка: выбрать оригинал
@@ -148,10 +182,14 @@ private slots:
     void on_btnNext_clicked(); //Копка: продолжить
     void on_btnSaveTime_clicked(); //Кнопка: Сохранить время задержки
     void on_btnOn_Off_HDD_clicked(); //Кнопка: вкллючения задержки запуска
+    void on_btnNotification_clicked();
+    void on_btnDownload_clicked();
+    void on_btnExitNF_clicked();
     //процессы
     void handleProcessError(QProcess::ProcessError error);
     void handleProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
     void readProcessOutput();
+    void onResult(QNetworkReply *reply);
 
 
     //Чекбоксы

@@ -42,7 +42,6 @@ void customMessageHandler(QtMsgType type, const QMessageLogContext &context, con
 int main(int argc, char *argv[])
 {
     // ОБЯЗАТЕЛЬНО: Регистрируем обработчик ДО создания QApplication
-
     qInstallMessageHandler(customMessageHandler);
 
     QApplication a(argc, argv);
@@ -54,8 +53,6 @@ int main(int argc, char *argv[])
 
     QCoreApplication::setOrganizationName("Replace X");
     QCoreApplication::setApplicationName("MyApp");
-
-    qDebug() << "Приложение запущено. Теперь это видно и в консоли, и в файле!";
 
     MainWindow w;
     w.show();

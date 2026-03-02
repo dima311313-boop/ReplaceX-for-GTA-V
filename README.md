@@ -1,4 +1,4 @@
-# ReplaceX 0.9.4 beta
+# ReplaceX 0.9.5 beta
 
 ReplaceX — программа для автоматической усатновки редуксов для GTA V (RageMP/AltV).  
 
@@ -19,7 +19,7 @@ ReplaceX — программа для автоматической усатно
 4. Следуйте инструкциям установки.
 
 ## Дополнительно
-- Версия 0.9.4 beta
+- Версия 0.9.5 beta
 - Скачать с сайта - https://majestic-mods.ru/load/soft/replacex_0_9_0_beta/14-1-0-192
 - Все предложения и баг-репорты присылайте в Telegram канал (https://t.me/replacexDev)  
 

@@ -9,6 +9,7 @@
 #include <QThread>
 #include <windows.h>
 #include <tlhelp32.h>
+#include <QSoundEffect>
 
 class FileWorker : public QObject
 {

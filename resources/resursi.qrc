@@ -7,7 +7,17 @@
         <file>telegram_icon.png</file>
         <file>photo_2026-01-15_107-25-59-round-corners.ico</file>
         <file>png-klev-club-bgmd-p-logotip-doneishen-alerts-png-4.png</file>
-        <file>IconG.png</file>
         <file>8022702-removebg-preview.png</file>
+        <file>Screenshot_363.xcf</file>
+        <file>Screenshot_375.png</file>
+        <file>IconG.ico</file>
+        <file>(online).png</file>
+        <file>Redux01-removebg-preview.png</file>
+        <file>Orig01.png</file>
+        <file>YouTube icon.png</file>
+    </qresource>
+    <qresource prefix="/sounds">
+        <file>sounds/Error.wav</file>
+        <file>sounds/Yspeh.wav</file>
     </qresource>
 </RCC>

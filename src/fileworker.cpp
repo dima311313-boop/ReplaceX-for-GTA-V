@@ -1,45 +1,68 @@
 #include "fileworker.h"
 #include <QDebug>
 
+
 void FileWorker::processInstallation(FileWorker::Config config) {
     emit statusUpdate("Установка модов...");
-    bool overallSuccess = true;
+    QStringList failedComponents;
 
     if (config.useRedux && !config.reduxPath.isEmpty()) {
         emit progressMessage("Установка Redux...");
-        if (!smartReplace(config.reduxPath, config.gameUpdatePath, "update.rpf")) overallSuccess = false;
+        if (!smartReplace(config.reduxPath, config.gameUpdatePath, "update.rpf")) {
+            failedComponents << "Redux (update.rpf)";
+        }
     }
 
     if (config.useGunPack && !config.gunPackSource.isEmpty()) {
         emit progressMessage("Установка GunPacks...");
-        if (!installGunPacks(config.gunPackSource, config.dlcPacksTarget, config.backupPath)) overallSuccess = false;
+        if (!installGunPacks(config.gunPackSource, config.dlcPacksTarget, config.backupPath)) {
+            failedComponents << "GunPacks";
+        }
     }
 
     if (config.useSounds && !config.soundModPath.isEmpty()) {
         emit progressMessage("Установка звуков...");
-        if (!internalReplaceSounds(config.soundModPath, config.sfxPath, config.soundBackupPath)) overallSuccess = false;
+        if (!internalReplaceSounds(config.soundModPath, config.sfxPath, config.soundBackupPath)) {
+            failedComponents << "Звуковые моды";
+        }
     }
 
-    emit operationFinished(overallSuccess, overallSuccess ? "Все моды успешно установлены" : "Ошибки при установке");
+    if (failedComponents.isEmpty()) {
+        emit operationFinished(true, "Все моды успешно установлены");
+    } else {
+        QString errorMsg = "Ошибка при установке: " + failedComponents.join(", ");
+        emit operationFinished(false, errorMsg);
+    }
 }
 
 void FileWorker::processRestoration(FileWorker::Config config) {
     emit statusUpdate("Возврат оригиналов...");
     killGtaEcosystem();
-    QThread::msleep(2000);
+    QThread::msleep(2000); // Даем время процессам завершиться
 
-    bool overallSuccess = true;
+    QStringList failedSteps;
 
     emit progressMessage("Восстановление update.rpf...");
-    if (!smartReplace(config.originalPath, config.gameUpdatePath, "update.rpf")) overallSuccess = false;
+    if (!smartReplace(config.originalPath, config.gameUpdatePath, "update.rpf")) {
+        failedSteps << "update.rpf";
+    }
 
     emit progressMessage("Восстановление GunPacks...");
-    if (!restoreGunPacks(config.dlcPacksTarget, config.backupPath)) overallSuccess = false;
+    if (!restoreGunPacks(config.dlcPacksTarget, config.backupPath)) {
+        failedSteps << "GunPacks";
+    }
 
     emit progressMessage("Восстановление звуков...");
-    if (!internalRestoreSounds(config.sfxPath, config.soundBackupPath)) overallSuccess = false;
+    if (!internalRestoreSounds(config.sfxPath, config.soundBackupPath)) {
+        failedSteps << "Звуковые архивы";
+    }
 
-    emit operationFinished(overallSuccess, overallSuccess ? "Оригиналы успешно возвращены" : "Ошибки при восстановлении");
+    if (failedSteps.isEmpty()) {
+        emit operationFinished(true, "Оригиналы успешно возвращены");
+    } else {
+        QString errorDetail = "Не удалось восстановить: " + failedSteps.join(", ");
+        emit operationFinished(false, errorDetail);
+    }
 }
 
 // --- РЕАЛИЗАЦИЯ РУЧНЫХ СЛОТОВ ---
@@ -78,20 +101,39 @@ void FileWorker::manualRestoreSounds(FileWorker::Config config) {
 
 bool FileWorker::smartReplace(const QString &source, const QString &targetDir, const QString &targetFileName) {
     if (source.isEmpty() || !QFile::exists(source)) return false;
+
+    QFileInfo srcInfo(source);
+    qint64 srcSize = srcInfo.size();
+
+    // ПРОВЕРКА 1: Если источник 0 КБ — это ошибка, не копируем
+    if (srcSize <= 0) {
+        qCritical() << "ОШИБКА: Исходный файл пуст (0 КБ):" << source;
+        return false;
+    }
+
     QString fullDestPath = QDir::toNativeSeparators(targetDir + "/" + targetFileName);
     QString nativeSource = QDir::toNativeSeparators(source);
+
     if (nativeSource.toLower() == fullDestPath.toLower()) return true;
 
-    for (int i = 0; i < 10; ++i) {
+    // Пытаемся 20 раз с короткой паузой (100мс)
+    for (int i = 0; i < 20; ++i) {
         if (QFile::exists(fullDestPath)) {
             SetFileAttributesW((LPCWSTR)fullDestPath.utf16(), FILE_ATTRIBUTE_NORMAL);
-            if (!DeleteFileW((LPCWSTR)fullDestPath.utf16())) {
-                QThread::msleep(1000);
-                continue;
+        }
+
+        // Копируем СРАЗУ поверх (FALSE позволяет перезаписывать)
+        if (CopyFileW((LPCWSTR)nativeSource.utf16(), (LPCWSTR)fullDestPath.utf16(), FALSE)) {
+            // ПРОВЕРКА 2: После копирования проверяем размер целевого файла
+            QFileInfo destInfo(fullDestPath);
+            if (destInfo.exists() && destInfo.size() == srcSize) {
+                return true;
+            } else {
+                qWarning() << "Попытка" << i+1 << ": Файл скопирован неверно (размер не совпадает). Пробуем снова...";
             }
         }
-        if (CopyFileW((LPCWSTR)nativeSource.utf16(), (LPCWSTR)fullDestPath.utf16(), FALSE)) return true;
-        QThread::msleep(1000);
+
+        QThread::msleep(100);
     }
     return false;
 }
@@ -99,14 +141,18 @@ bool FileWorker::smartReplace(const QString &source, const QString &targetDir, c
 bool FileWorker::copyDirectory(const QString &sourceDir, const QString &targetDir) {
     QDir sourceDirectory(sourceDir);
     if (!QDir().mkpath(targetDir)) return false;
+
     QFileInfoList fileList = sourceDirectory.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
     foreach (const QFileInfo &fileInfo, fileList) {
         QString srcPath = QDir::toNativeSeparators(fileInfo.absoluteFilePath());
         QString dstPath = QDir::toNativeSeparators(targetDir + "/" + fileInfo.fileName());
+
         if (fileInfo.isDir()) {
             if (!copyDirectory(srcPath, dstPath)) return false;
         } else {
-            SetFileAttributesW((LPCWSTR)dstPath.utf16(), FILE_ATTRIBUTE_NORMAL);
+            if (QFile::exists(dstPath)) {
+                SetFileAttributesW((LPCWSTR)dstPath.utf16(), FILE_ATTRIBUTE_NORMAL);
+            }
             if (!CopyFileW((LPCWSTR)srcPath.utf16(), (LPCWSTR)dstPath.utf16(), FALSE)) return false;
         }
     }
@@ -122,18 +168,19 @@ bool FileWorker::installGunPacks(const QString &source, const QString &target, c
         QString targetItem = QDir::toNativeSeparators(targetDir.absoluteFilePath(item.fileName()));
         QString backupItem = QDir::toNativeSeparators(backup + "/" + item.fileName());
 
-        if (QFile::exists(targetItem) || QDir(targetItem).exists()) {
-            if (item.isDir()) copyDirectory(targetItem, backupItem);
-            else CopyFileW((LPCWSTR)targetItem.utf16(), (LPCWSTR)backupItem.utf16(), FALSE);
+        // УМНЫЙ БЭКАП: Только если его еще нет
+        if (!QFile::exists(backupItem) && !QDir(backupItem).exists()) {
+            if (QFile::exists(targetItem) || QDir(targetItem).exists()) {
+                if (item.isDir()) copyDirectory(targetItem, backupItem);
+                else CopyFileW((LPCWSTR)targetItem.utf16(), (LPCWSTR)backupItem.utf16(), FALSE);
+            }
         }
 
         if (item.isDir()) {
             QDir(targetItem).removeRecursively();
             if (!copyDirectory(item.absoluteFilePath(), targetItem)) return false;
         } else {
-            SetFileAttributesW((LPCWSTR)targetItem.utf16(), FILE_ATTRIBUTE_NORMAL);
-            DeleteFileW((LPCWSTR)targetItem.utf16());
-            if (!CopyFileW((LPCWSTR)item.absoluteFilePath().utf16(), (LPCWSTR)targetItem.utf16(), FALSE)) return false;
+            if (!smartReplace(item.absoluteFilePath(), target, item.fileName())) return false;
         }
     }
     return true;
@@ -145,14 +192,24 @@ bool FileWorker::restoreGunPacks(const QString &target, const QString &backup) {
     QFileInfoList items = backupDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
     foreach (const QFileInfo &item, items) {
         QString targetPath = QDir::toNativeSeparators(target + "/" + item.fileName());
+
+        // Удаляем модовое
         if (item.isDir()) QDir(targetPath).removeRecursively();
         else {
             SetFileAttributesW((LPCWSTR)targetPath.utf16(), FILE_ATTRIBUTE_NORMAL);
             DeleteFileW((LPCWSTR)targetPath.utf16());
         }
 
-        if (item.isDir()) copyDirectory(item.absoluteFilePath(), targetPath);
-        else CopyFileW((LPCWSTR)item.absoluteFilePath().utf16(), (LPCWSTR)targetPath.utf16(), FALSE);
+        // Возвращаем оригинал
+        if (item.isDir()) {
+            if (!copyDirectory(item.absoluteFilePath(), targetPath)) return false;
+        } else {
+            if (!CopyFileW((LPCWSTR)item.absoluteFilePath().utf16(), (LPCWSTR)targetPath.utf16(), FALSE)) return false;
+        }
+
+        // Очищаем бэкап
+        if (item.isDir()) QDir(item.absoluteFilePath()).removeRecursively();
+        else QFile::remove(item.absoluteFilePath());
     }
     return true;
 }
@@ -162,23 +219,31 @@ bool FileWorker::internalReplaceSounds(const QString &modPath, const QString &sf
     QStringList files = modDir.entryList(QStringList() << "*.rpf", QDir::Files);
     QDir().mkpath(backupPath);
 
-    for(const QString &f : files) {
-        QString orig = QDir::toNativeSeparators(sfxPath + "/" + f);
-        QString bkp = QDir::toNativeSeparators(backupPath + "/" + f);
-        if (!QFile::exists(bkp) && QFile::exists(orig)) {
-            CopyFileW((LPCWSTR)orig.utf16(), (LPCWSTR)bkp.utf16(), FALSE);
+    foreach (const QString &f, files) {
+        QString targetItem = QDir::toNativeSeparators(sfxPath + "/" + f);
+        QString backupItem = QDir::toNativeSeparators(backupPath + "/" + f);
+        QString modItem = QDir::toNativeSeparators(modPath + "/" + f);
+
+        // УМНЫЙ БЭКАП
+        if (!QFile::exists(backupItem)) {
+            if (QFile::exists(targetItem)) {
+                CopyFileW((LPCWSTR)targetItem.utf16(), (LPCWSTR)backupItem.utf16(), FALSE);
+            }
         }
-        if (!smartReplace(modPath + "/" + f, sfxPath, f)) return false;
+
+        // БЫСТРАЯ ЗАМЕНА
+        if (!smartReplace(modItem, sfxPath, f)) return false;
     }
     return true;
 }
 
 bool FileWorker::internalRestoreSounds(const QString &sfxPath, const QString &backupPath) {
     QDir bkpDir(backupPath);
-    if (!bkpDir.exists()) return false;
+    if (!bkpDir.exists()) return true;
     QFileInfoList files = bkpDir.entryInfoList(QStringList() << "*.rpf", QDir::Files);
-    for(const QFileInfo &f : files) {
+    foreach (const QFileInfo &f, files) {
         if (!smartReplace(f.absoluteFilePath(), sfxPath, f.fileName())) return false;
+        QFile::remove(f.absoluteFilePath());
     }
     return true;
 }

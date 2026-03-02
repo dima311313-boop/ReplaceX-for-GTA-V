@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "modernbutton.h"
 #include <QFile>
 #include <QString>
 #include <QDebug>
@@ -28,6 +29,11 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <QGraphicsBlurEffect>
+#include <QScreen>
+#include <QSoundEffect>
+
+
 
 
 QPixmap getRoundedPixmap(const QPixmap& src, int radius) {
@@ -57,12 +63,25 @@ QPixmap getRoundedPixmap(const QPixmap& src, int radius) {
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
 
+    QString razdel = "-----------------------------------------------------------------";
 
+    QString banner = R"(
+    ____             __                _  __
+   / __ \___  ____  / /___ __________ | |/ /
+  / /_/ / _ \/ __ \/ / __ `/ ___/ _ \ |   /
+ / _, _/  __/ /_/ / / /_/ / /__/  __//   |
+/_/ |_|\___/ .___/_/\__,_/\___/\___//_/|_|
+          /_/                        v0.9.5
+)";
+
+    qDebug().noquote() << banner;
 
     // --- ИНИЦИАЛИЗАЦИЯ ПОТОКА ---
+    // В конструкторе MainWindow, там где создаешь поток:
     m_workerThread = new QThread(this);
-    m_worker = new FileWorker(); // Не передаем parent, так как он переедет в поток
+    m_worker = new FileWorker();
     m_worker->moveToThread(m_workerThread);
+
 
     // Соединяем сигналы MainWindow с методами FileWorker
     connect(this, &MainWindow::requestInstall, m_worker, &FileWorker::processInstallation);
@@ -83,7 +102,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     // Очистка при завершении
     connect(m_workerThread, &QThread::finished, m_worker, &QObject::deleteLater);
 
-    m_workerThread->start();
+
+
+    m_workerThread->start(QThread::HighPriority);
     // --- КОНЕЦ ИНИЦИАЛИЗАЦИИ ПОТОКА ---
 
 
@@ -96,18 +117,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
 
     loadSettings();
-    QPixmap iconPixmap(":/izobr/IconG.png");
-    int cornerRadius = 25; // Чем больше число, тем сильнее закругление
-
-    QPixmap roundedIcon = getRoundedPixmap(iconPixmap, cornerRadius);
-    this->setWindowIcon(QIcon(roundedIcon));
-
 
     checkTimer = new QTimer(this);
     connect(checkTimer, &QTimer::timeout, this, &MainWindow::checkGtaProcess);
     checkTimer->start(3000); // Проверять раз в 3 секунды
 
+    ui->oknoGta5V->setVisible(false);
     ui->btnExitNF->setVisible(false);
+    ui->oknoSettings->setVisible(false);
     ui->oknoNF->setVisible(false);
     ui->btnNotification->setVisible(false);
     ui->oknoDiscleamer->setVisible(false);
@@ -160,9 +177,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     this->setFixedSize(646, 374);
 
-    qDebug() << "Программа запущенна.";
+    qInfo() << "Программа запущенна.";
     ui->miniProgress->setText("Ожидание запуска игры");
-    this->setWindowIcon(QIcon(":/izobr/photo_2026-01-15_107-25-59-round-corners.ico"));
+    this->setWindowIcon(QIcon(":/izobr/IconG.ico"));
     this->setWindowTitle("ReplaceX");
     //закругление tg
     ui->btnTelegram->setStyleSheet(
@@ -209,7 +226,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     trayMenu->addAction(quitAction);
 
     trayIcon = new QSystemTrayIcon(this);
-    trayIcon->setIcon(QIcon(":/izobr/photo_2026-01-15_107-25-59-round-corners.ico")); // Твоя иконка
+    trayIcon->setIcon(QIcon(":/izobr/IconG.ico")); // Твоя иконка
     trayIcon->setContextMenu(trayMenu);
     trayIcon->show();
 
@@ -226,6 +243,21 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     //Настройки для сохранения путей
     QSettings settings("MyCompany", "MyGameTool");
+
+    bool isSoundEnabled = settings.value("Settings/SoundEnabled", true).toBool();
+    ui->checkSound->setChecked(isSoundEnabled);
+
+    bool isKnopkiEnabled = settings.value("Settings/KnopkiEnable", false).toBool();
+    ui->checkKnopki->setChecked(isKnopkiEnabled);
+
+
+    ui->leditLogsFile->setText(QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/ReplaceX.log"));
+
+    int savedIndex = settings.value("SelectedPlatform", 0).toInt();
+
+    // 2. Устанавливаем его в комбобокс
+    ui->cmbServer->setCurrentIndex(savedIndex);
+
     //.bat
     // Читаем время. Если в реестре пусто 15 по умолчанию
     bool autoStart = settings.value("autoStart", false).toBool();
@@ -257,16 +289,16 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->leditPapcaZV->setText(m_x64AudioSfxPath);
     ui->leditModZV->setText(m_modSoundPath);
 
-    qDebug() << "Настройки загружены:" << m_x64AudioSfxPath << m_modSoundPath;
 
     //авто поиск корневой и вывод
     bool firstRun = !settings.contains("FirstRun");
 
 
     if (firstRun) {
+        blurEf(true);
+        ui->oknoGta5V->setVisible(true);
         // Автоматически ищем папку update
         QString updateFolder = autoFindUpdateFolder();
-
         if (!updateFolder.isEmpty()) {
             // Сохраняем в настройки
             settings.setValue("FirstRun", true);
@@ -288,10 +320,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
         }
     }
 
-    qDebug() << "Файл настроек:" << settings.fileName();
+    qInfo() << "Файл настроек:" << settings.fileName();
     //рпф
 
     if (firstRun) {
+
         QString rpfPath = findUpdateRpf();
         if (!rpfPath.isEmpty()) {
             if (copyUpdateRpfToAppDir(rpfPath)) {
@@ -326,9 +359,49 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->leditRedux->setText(settings.value("Paths/ReduxFile", "").toString());
     ui->checkAutoLoad->setChecked(settings.value("Settings/AutoLoad", false).toBool());
 
+
+    qDebug() << " --------------------------Пути к файлам--------------------------";
+    qInfo() << "Пути к звукам загруженны:" << m_x64AudioSfxPath << m_modSoundPath;
+    qInfo() << "Пути к update.rpf загруженны:" << "Редукс: " << settings.value("Paths/ReduxFile", "").toString() << "Оригинальный: " << settings.value("Paths/OriginalFile", "").toString() << "Папка: " << savedPath;
+    qInfo() << "Пути к ган пакам загруженны: " << "Ган паки: " << m_gunPackSourcePath << "Папка: " << m_dlcPacksTargetPath;
+    qDebug() << razdel;
+
     processTimer = new QTimer(this);
     connect(processTimer, &QTimer::timeout, this, &MainWindow::checkProcessLoop);
     processTimer->start(500);
+
+
+    onlineTimer = new QTimer(this);
+    connect(onlineTimer, &QTimer::timeout, this, &MainWindow::updateOnlineStatus);
+    onlineTimer->start(45000); //(45 секунд)
+
+    // Сразу делаем первый запрос
+    updateOnlineStatus();
+
+    // В конструктор MainWindow::MainWindow
+    m_soundSuccess = new QSoundEffect(this);
+    // Используем qrc:/ для надежности
+    m_soundSuccess->setSource(QUrl("qrc:/sounds/sounds/Yspeh.wav"));
+    m_soundSuccess->setVolume(0.5);
+
+    // Добавим отладку статуса
+    connect(m_soundSuccess, &QSoundEffect::loadedChanged, this, [this]() {
+        if (m_soundSuccess->isLoaded()) {
+            qDebug() << "Звук успеха загружен и готов!";
+        }
+    });
+
+    m_soundError = new QSoundEffect(this);
+    m_soundError->setSource(QUrl("qrc:/sounds/sounds/Error.wav"));
+    m_soundError->setVolume(0.6);
+
+    bool state = ui->checkKnopki->isChecked();
+
+    if (state) {
+        ui->btnReplaceRedux->setImagePath(":/izobr/Redux01-removebg-preview.png");
+
+        ui->btnReplaceOrig->setImagePath(":/izobr/Orig01.png");
+    }
 }
 
 MainWindow::~MainWindow() {
@@ -350,17 +423,87 @@ MainWindow::~MainWindow() {
 
     delete ui;
 }
-const QString CURRENT_VERSION = "0.9.4"; //текущая версия
+
+void MainWindow::blurEf(bool enable)
+{
+    static QWidget *overlay = nullptr;
+
+    if (enable) {
+        if (!overlay) {
+            overlay = new QWidget(this);
+            overlay->setGeometry(this->rect());
+            // Пропускаем клики СКВОЗЬ оверлей, чтобы они долетали до oknoGta5V
+            overlay->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+            overlay->show();
+        }
+
+        // 1. Блюрим ТОЛЬКО то, что под окном.
+        // Если oknoGta5V лежит в centralwidget, блюр его достанет.
+        // РЕШЕНИЕ: Применяем блюр к фоновым элементам отдельно или используем Snapshot
+        QGraphicsBlurEffect *blur = new QGraphicsBlurEffect(this);
+        blur->setBlurHints(QGraphicsBlurEffect::QualityHint);
+        ui->centralwidget->setGraphicsEffect(blur);
+
+        QPropertyAnimation *anim = new QPropertyAnimation(blur, "blurRadius");
+        anim->setDuration(600);
+        anim->setStartValue(0);
+        anim->setEndValue(25);
+        anim->setEasingCurve(QEasingCurve::OutCirc);
+        anim->start(QAbstractAnimation::DeleteWhenStopped);
+
+        // 2. ВЫВОДИМ ОКНО ИЗ-ПОД БЛЮРА
+        // Чтобы oknoGta5V не блюрилось, оно НЕ ДОЛЖНО быть ребенком centralwidget
+        // Попробуй временно сменить ему родителя на само MainWindow
+        ui->oknoGta5V->setParent(this);
+        ui->oknoGta5V->show();
+        ui->oknoGta5V->raise();
+
+    } else {
+        // Твой код снятия блюра (оставляем как есть, он норм)
+        if (ui->centralwidget->graphicsEffect()) {
+            QGraphicsBlurEffect *currentBlur = qobject_cast<QGraphicsBlurEffect*>(ui->centralwidget->graphicsEffect());
+            QPropertyAnimation *anim = new QPropertyAnimation(currentBlur, "blurRadius");
+            anim->setDuration(400);
+            anim->setStartValue(currentBlur->blurRadius());
+            anim->setEndValue(0);
+
+            connect(anim, &QPropertyAnimation::finished, this, [=]() {
+                ui->centralwidget->setGraphicsEffect(nullptr);
+                if (overlay) { overlay->deleteLater(); overlay = nullptr; }
+                ui->oknoGta5V->hide();
+            });
+            anim->start(QAbstractAnimation::DeleteWhenStopped);
+        }
+    }
+}
+
+// Твоя текущая версия программы
+const QString CURRENT_VERSION = "0.9.5";
 
 void MainWindow::onResult(QNetworkReply *reply) {
+    if (reply->error() != QNetworkReply::NoError) {
+        qDebug() << "Ошибка сети:" << reply->errorString();
+        reply->deleteLater();
+        return;
+    }
+
+    // Читаем данные от сервера
+    QByteArray data = reply->readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    QJsonObject mainObj = doc.object();
+
+    // --- 1. ОНЛАЙН СТАТУС ---
+    // Сервер присылает его в поле "online_count"
+    if (mainObj.contains("online_count")) {
+        int online = mainObj["online_count"].toInt();
+        ui->lblOnline->setText(QString("🟢 Онлайн: %1").arg(online));
+    }
+
     if (reply->error() != QNetworkReply::NoError) {
         qDebug() << "Сетевая ошибка:" << reply->errorString();
         reply->deleteLater();
         return;
     }
-
-    QByteArray data = reply->readAll();
-    QJsonDocument doc = QJsonDocument::fromJson(data);
 
     // 1. Проверка на объект (теперь у нас корень - объект { })
     if (!doc.isObject()) {
@@ -368,8 +511,6 @@ void MainWindow::onResult(QNetworkReply *reply) {
         reply->deleteLater();
         return;
     }
-
-    QJsonObject mainObj = doc.object();
 
     // --- ЧАСТЬ 1: ДОНАТЕРЫ ---
     QJsonArray donatorsArray = mainObj["donators"].toArray();
@@ -394,19 +535,37 @@ void MainWindow::onResult(QNetworkReply *reply) {
             changelogText += "• " + change.toString() + "\n";
         }
     }
-
-    qDebug() << "Проверка версии. Сервер:" << remoteVersion << "Локальная:" << CURRENT_VERSION;
-
-    if (!remoteVersion.isEmpty() && remoteVersion != CURRENT_VERSION) {
-        qDebug() << "Доступна новая версия: " << CURRENT_VERSION;
-        ui->lblUpVer->setText("Новая версия: " + remoteVersion);
-        ui->lblSpisocIzm->setText(changelogText);
-        ui->btnNotification->setVisible(true);
-
-
+    if(Y == false)
+    {
+        qDebug() << "Проверка версии. Сервер:" << remoteVersion << "Локальная:" << CURRENT_VERSION;
+        Y = true;
     }
-
+    if (!remoteVersion.isEmpty() && remoteVersion != CURRENT_VERSION) {
+        if(N == false){
+            if(CURRENT_VERSION > remoteVersion)
+            {
+                qDebug() << "Удачных тестов!";
+            }
+        else {
+            qDebug() << "Доступна новая версия: " << remoteVersion;
+            ui->lblUpVer->setText("Новая версия: " + remoteVersion);
+            ui->lblSpisocIzm->setText(changelogText);
+            ui->btnNotification->setVisible(true);
+            }
+        }
+        N = true;
+    }
     reply->deleteLater();
+}
+void MainWindow::updateOnlineStatus() {
+    // 1. Формируем строку
+    QString urlString = QString("https://replacex-server.onrender.com/api/stats?v=%1").arg(CURRENT_VERSION);
+
+    // 2. Используем фигурные скобки {}, чтобы компилятор не путался
+    QNetworkRequest request{QUrl(urlString)};
+
+    // Теперь manager->get увидит объект request, а не функцию
+    manager->get(request);
 }
 
 
@@ -469,7 +628,7 @@ bool MainWindow::copyFileToGame(QString sourcePath, QString destFolder) {
 
     // 1. ПРОВЕРКА: Чтобы не копировать файл в самого себя (от этого и затирается!)
     if (nativeSource.toLower() == fullDestPath.toLower()) {
-        qDebug() << ">>> ПРОПУСК: Источник и цель совпадают!";
+        qCritical() << ">>> ПРОПУСК: Источник и цель совпадают!";
         return true;
     }
 
@@ -484,7 +643,7 @@ bool MainWindow::copyFileToGame(QString sourcePath, QString destFolder) {
         return true;
     } else {
         DWORD err = GetLastError();
-        qDebug() << ">>> ОШИБКА WinAPI:" << err; // Если 32 — файл занят
+        qCritical() << ">>> ОШИБКА WinAPI:" << err; // Если 32 — файл занят
         return false;
     }
 }
@@ -571,23 +730,65 @@ FileWorker::Config MainWindow::getCurrentConfig() {
 
 
 void MainWindow::checkProcessLoop() {
-    if (m_isOperationPending) return; // Не проверяем, пока идет копия
+    if (m_isOperationPending) return;
 
-    bool isGameActive = isProcessRunning("gta5.exe");
+    int serverIndex = ui->cmbServer->currentIndex();
 
-    if (isGameActive && !m_wasGameRunning) {
+    // Проверка специфичных процессов
+    bool isGtaRunning = isProcessRunning("GTA5.exe");
+    bool isEacRunning = isProcessRunning("EACLauncher.exe") || isProcessRunning("EasyAntiCheat_Launcher.exe");
+    bool isRageRunning = isProcessRunning("RageMP.exe");
+    bool isAltvRunning = isProcessRunning("altv-client.exe") || isProcessRunning("altv.exe");
+    bool isRglRunning = isProcessRunning("Launcher.exe");
+
+    // 1. СТРОГАЯ ЛОГИКА ЗАПУСКА
+    bool shouldInstall = false;
+    if (serverIndex == 2) { // RageMP
+        // Установка только если есть признаки RageMP
+        shouldInstall = isEacRunning && !isAltvRunning;
+    } else if (serverIndex == 1) { // AltV
+        // Установка только если есть признаки AltV
+        shouldInstall = isGtaRunning && (!isEacRunning && !isRageRunning);
+    } else {
+        shouldInstall = isGtaRunning;
+    }
+
+    if (shouldInstall && !m_wasGameRunning) {
         m_wasGameRunning = true;
         m_isOperationPending = true;
+        qDebug() << "Запуск установки для:" << (serverIndex == 2 ? "RageMP" : "AltV");
         emit requestInstall(getCurrentConfig());
+        return;
     }
 
-    if (!isGameActive && m_wasGameRunning) {
-        m_wasGameRunning = false;
-        m_isOperationPending = true;
-        emit requestRestore(getCurrentConfig());
+    // Фиксируем, что игра реально запустилась
+    if (isGtaRunning) {
+        m_gameStarted = true;
+    }
+
+    // 2. ЛОГИКА ВОССТАНОВЛЕНИЯ
+    // Условие: моды стоят, но игра НЕ запущена
+    if (m_wasGameRunning && !isGtaRunning) {
+
+        // Для RageMP: удаляем только если игра УЖЕ поработала (m_gameStarted)
+        // ИЛИ если EAC закрылся, так и не запустив игру (отмена)
+        bool userCancelled = (serverIndex == 2 && !isEacRunning && !m_gameStarted);
+
+        if (m_gameStarted || userCancelled || serverIndex != 2) {
+            m_wasGameRunning = false;
+            m_gameStarted = false;
+            m_isOperationPending = true;
+
+            if (serverIndex == 2) { // RageMP
+                QTimer::singleShot(3000, this, [this]() {
+                    emit requestRestore(getCurrentConfig());
+                });
+            } else if (isRglRunning || serverIndex == 0) {
+                emit requestRestore(getCurrentConfig());
+            }
+        }
     }
 }
-
 // Обработчики ответов от потока
 void MainWindow::onWorkerStatus(QString status) {
     ui->miniProgress->setText(status);
@@ -600,12 +801,22 @@ void MainWindow::onWorkerProgress(QString msg) {
 
 void MainWindow::onWorkerFinished(bool success, QString details) {
     m_isOperationPending = false;
-    if (!success) {
-        qDebug() << "Ошибка операции:" << details;
+
+    // Проверяем, включен ли звук в настройках (через чекбокс)
+    bool soundEnabled = ui->checkSound->isChecked();
+
+    if (success) {
+        if (soundEnabled && m_soundSuccess->isLoaded()) {
+            m_soundSuccess->play();
+        }
+    } else {
+        if (soundEnabled) {
+            m_soundError->play();
+        }
     }
+
     ui->miniProgress->setText(details);
 }
-
 // --- ОБРАБОТЧИКИ КНОПОК ---
 
 void MainWindow::on_btnAddOrig_clicked() {
@@ -668,7 +879,7 @@ void MainWindow::on_checkAutoLoad_toggled(bool checked) {
 
     if (isOrigOk && isPapkaOk && isReduxOk && isNotSame) {
         QSettings("MyCompany", "MyGameTool").setValue("Settings/AutoLoad", true);
-        qDebug() << "AutoLoad успешно включен";
+        qInfo() << "AutoLoad успешно включен";
     } else {
         ui->checkAutoLoad->blockSignals(true);
         ui->checkAutoLoad->setChecked(false);
@@ -808,7 +1019,6 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return true;
         }
     }
-
     return QMainWindow::eventFilter(obj, event);
 }
 
@@ -823,7 +1033,9 @@ void MainWindow::on_btnTelegram_clicked()
 //ган пак
 void MainWindow::on_btnOknoDop_clicked()
 {
+    ui->oknoGta5V->setVisible(false);
     ui->oknoNF->setVisible(false);
+    ui->btnExitNF->setVisible(false);
     if(oknoDop == true){
         //дисклеймер
         QRect startRect = ui->btnOknoDop->geometry();
@@ -908,6 +1120,7 @@ void MainWindow::on_btnOknoDop_clicked()
 void MainWindow::on_btnExitGP_clicked()
 {
     oknoDop = true;
+    ui->oknoSettings->setVisible(false);
     ui->oknoGP->setVisible(false);
     ui->oknoDiscleamer->setVisible(false);
     ui->oknoKnopohki->setVisible(false);
@@ -1086,7 +1299,7 @@ bool MainWindow::restoreGunPacks() {
 
     QDir backupDir(m_backupPath);
     if (!backupDir.exists()) {
-        qDebug() << ">>> Папка бэкапа не существует. Восстанавливать нечего.";
+        qCritical() << ">>> Папка бэкапа не существует. Восстанавливать нечего.";
         return true;
     }
 
@@ -1094,7 +1307,7 @@ bool MainWindow::restoreGunPacks() {
     QFileInfoList backupItems = backupDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
 
     if (backupItems.isEmpty()) {
-        qDebug() << ">>> Папка бэкапа пуста.";
+        qCritical() << ">>> Папка бэкапа пуста.";
         return true;
     }
 
@@ -1124,12 +1337,12 @@ bool MainWindow::restoreGunPacks() {
                 if (QFile::remove(targetPath)) { removed = true; break; }
             }
 
-            qDebug() << ">>> Файл занят, попытка удаления" << i+1;
+            qWarning() << ">>> Файл занят, попытка удаления" << i+1;
             QThread::msleep(1000); // Ждем секунду, если игра еще закрывается
         }
 
         if (!removed) {
-            qDebug() << ">>> ОШИБКА: Не удалось удалить модовый файл:" << targetPath;
+            qCritical() << ">>> ОШИБКА: Не удалось удалить модовый файл:" << targetPath;
             overallSuccess = false;
             continue;
         }
@@ -1149,7 +1362,7 @@ bool MainWindow::restoreGunPacks() {
             else QFile::remove(sourcePath);
             qDebug() << ">>> УСПЕШНО восстановлен:" << itemName;
         } else {
-            qDebug() << ">>> ОШИБКА копирования оригинала назад:" << itemName;
+            qCritical() << ">>> ОШИБКА копирования оригинала назад:" << itemName;
             overallSuccess = false;
         }
     }
@@ -1198,7 +1411,7 @@ QString MainWindow::findUpdateRpf()
 bool MainWindow::copyUpdateRpfToAppDir(const QString &sourcePath)
 {
     if (sourcePath.isEmpty() || !QFile::exists(sourcePath)) {
-        qDebug() << "Исходный файл не найден:" << sourcePath;
+        qCritical() << "Исходный файл не найден:" << sourcePath;
         return false;
     }
 
@@ -1206,17 +1419,17 @@ bool MainWindow::copyUpdateRpfToAppDir(const QString &sourcePath)
     QString dataFolder = appDir + "/data";
     QString destPath = dataFolder + "/update.rpf";
 
-    qDebug() << "Целевая папка:" << dataFolder;
-    qDebug() << "Полный путь к копии:" << destPath;
+    qInfo() << "Целевая папка:" << dataFolder;
+    qInfo() << "Полный путь к копии:" << destPath;
 
     QDir dir;
     if (!dir.mkpath(dataFolder)) {
-        qDebug() << "Не удалось создать папку:" << dataFolder;
+        qCritical() << "Не удалось создать папку:" << dataFolder;
         return false;
     }
 
     if (QFile::exists(destPath) && !QFile::remove(destPath)) {
-        qDebug() << "Не удалось удалить старый файл:" << destPath;
+        qCritical() << "Не удалось удалить старый файл:" << destPath;
         return false;
     }
 
@@ -1230,7 +1443,7 @@ bool MainWindow::copyUpdateRpfToAppDir(const QString &sourcePath)
             settings.sync();
             return true;
         } else {
-            qDebug() << "Ошибка: файл не найден после копирования:" << destPath;
+            qCritical() << "Ошибка: файл не найден после копирования:" << destPath;
             return false;
         }
     } else {
@@ -1384,7 +1597,7 @@ void MainWindow::on_btnZVOpen_clicked()
 //установка звуков оружия
 
 void MainWindow::on_btnAutoSearchZV_clicked() {
-    qDebug() << "=== Автопоиск x64\\audio\\sfx ===";
+    qInfo() << "=== Автопоиск x64\\audio\\sfx ===";
 
 
     // 1. Проверка реестра Rockstar
@@ -1411,13 +1624,15 @@ void MainWindow::on_btnAutoSearchZV_clicked() {
             settings.setValue("Paths/X64AudioSfx", m_x64AudioSfxPath);
 
 
-            qDebug() << "Путь до x64\\audio\\sfx найден:" << m_x64AudioSfxPath;
+            qInfo() << "Путь до x64\\audio\\sfx найден:" << m_x64AudioSfxPath;
+            /*
             QMessageBox::information(this, "Найдено", "Путь до x64\\audio\\sfx определён автоматически.");
+            */
             return;
         }
     }
 
-    qDebug() << "Автопоиск не удался.";
+    qInfo() << "Автопоиск не удался.";
     QMessageBox::warning(this, "Не найдено", "Автопоиск папки x64\\audio\\sfx не удался. Укажите вручную.");
 }
 
@@ -1433,7 +1648,7 @@ void MainWindow::on_btnZVMod_clicked() {
         QSettings settings("MyCompany", "MyGameTool");
         settings.setValue("Paths/X64AudioSfx", m_x64AudioSfxPath);
 
-        qDebug() << "Путь до x64\\audio\\sfx установлен вручную:" << m_x64AudioSfxPath;
+        qInfo() << "Путь до x64\\audio\\sfx установлен вручную:" << m_x64AudioSfxPath;
     }
 }
 
@@ -1450,7 +1665,7 @@ void MainWindow::on_btnPapkaZV_clicked() {
         QSettings settings("MyCompany", "MyGameTool");
         settings.setValue("Paths/SoundMod", m_modSoundPath);
 
-        qDebug() << "Путь к модам установлен:" << m_modSoundPath;
+        qInfo() << "Путь к модам установлен:" << m_modSoundPath;
     }
 }
 
@@ -1484,7 +1699,7 @@ bool MainWindow::copyRpfFiles(const QString &sourceDir, const QString &targetDir
         // Копируем через WinAPI
         if (!CopyFileW((LPCWSTR)sourcePath.utf16(), (LPCWSTR)targetPath.utf16(), FALSE)) {
             DWORD err = GetLastError();
-            qDebug() << ">>> ОШИБКА WinAPI при копировании звука:" << fileName << "Код ошибки:" << err;
+            qCritical() << ">>> ОШИБКА WinAPI при копировании звука:" << fileName << "Код ошибки:" << err;
             return false;
         }
     }
@@ -1511,10 +1726,10 @@ bool MainWindow::backupOriginalRpfFiles(const QStringList &modFiles) {
 
             // Копируем оригинал в бэкап через WinAPI
             if (!CopyFileW((LPCWSTR)originalPath.utf16(), (LPCWSTR)backupPath.utf16(), FALSE)) {
-                qDebug() << ">>> ОШИБКА бэкапа звука:" << fileName << "Error:" << GetLastError();
+                qCritical() << ">>> ОШИБКА бэкапа звука:" << fileName << "Error:" << GetLastError();
                 return false;
             }
-            qDebug() << ">>> Бэкап создан:" << fileName;
+            qInfo() << ">>> Бэкап создан:" << fileName;
         }
     }
     return true;
@@ -1536,7 +1751,7 @@ void MainWindow::saveSettings() {
     s.setValue("checkAutoLoadZV", ui->checkAutoLoadZV->isChecked());
 
     s.sync();
-    qDebug() << "Настройки сохранены.";
+    qInfo() << "Настройки сохранены.";
 }
 
 void MainWindow::loadSettings() {
@@ -1561,7 +1776,8 @@ void MainWindow::loadSettings() {
     ui->checkAutoLoadZV->setChecked(s.value("checkAutoLoadZV", false).toBool());
     ui->checkAutoLoadZV->blockSignals(false);
 
-    qDebug() << "Настройки загружены: " << ui->leditPapka->text() << ui->leditOrig->text();
+    ui->checkSound->setChecked(s.value("Settings/SoundEnabled", true).toBool());
+
 }
 
 
@@ -1579,6 +1795,7 @@ void MainWindow::on_checkAutoLoadZV_toggled(bool checked) {
 
     // 1. Проверка leditPapcaZV: папка sfx на конце
     bool isSfxOk = pathSfx.endsWith("/sfx") && QDir(pathSfx).exists();
+    bool isSfxNeok = !pathModZV.endsWith("/sfx") && QDir(pathModZV).exists();
 
     // 2. Проверка папки с модами (откуда берем RESIDENT.rpf и т.д.)
     QDir modDir(pathModZV);
@@ -1586,7 +1803,7 @@ void MainWindow::on_checkAutoLoadZV_toggled(bool checked) {
     bool hasWeapons = modDir.exists("WEAPONS_PLAYER.rpf");
     bool hasZVOu = hasResident || hasWeapons;
 
-    if (isSfxOk && hasZVOu) {
+    if (isSfxOk && hasZVOu && isSfxNeok) {
         // Предупреждение о количестве файлов
         QStringList entries = modDir.entryList(QDir::Files | QDir::NoDotAndDotDot);
         if (entries.size() > 2) {
@@ -1602,6 +1819,7 @@ void MainWindow::on_checkAutoLoadZV_toggled(bool checked) {
         QStringList errors;
         if (!isSfxOk) errors << "- Путь к папке игры должен заканчиваться на 'sfx'";
         if (!hasZVOu) errors << "- В папке модов не найдены RESIDENT.rpf или WEAPONS_PLAYER.rpf";
+        if(!isSfxNeok) errors << "- Путь к звукам не должен содержать sfx, внимательно прочитайте инструкцию!!!";
 
         QMessageBox::critical(this, "Ошибка звуков", "Проверьте пути звуков:\n" + errors.join("\n"));
     }
@@ -1644,7 +1862,7 @@ bool MainWindow::safeCopy(const QString &src, const QString &destFolder, bool is
 
     // Если пути одинаковые — это ошибка настроек
     if (nativeSource.toLower() == fullDestPath.toLower()) {
-        qDebug() << "!!! ОШИБКА: Источник и цель — один и тот же файл!";
+        qCritical() << "ОШИБКА: Источник и цель — один и тот же файл!";
         return false;
     }
 
@@ -1684,7 +1902,7 @@ bool MainWindow::restoreSounds() {
         if (QFile::exists(targetPath)) {
             SetFileAttributesW((LPCWSTR)targetPath.utf16(), FILE_ATTRIBUTE_NORMAL);
             if (!DeleteFileW((LPCWSTR)targetPath.utf16())) {
-                qDebug() << ">>> ОШИБКА WinAPI: Не удалось удалить модовый звук:" << GetLastError();
+                qCritical() << ">>> ОШИБКА WinAPI: Не удалось удалить модовый звук:" << GetLastError();
                 failCount++;
                 continue;
             }
@@ -1692,7 +1910,7 @@ bool MainWindow::restoreSounds() {
 
         // Возвращаем чистый файл из бэкапа
         if (!CopyFileW((LPCWSTR)backupPath.utf16(), (LPCWSTR)targetPath.utf16(), FALSE)) {
-            qDebug() << ">>> ОШИБКА WinAPI при возврате звука:" << GetLastError();
+            qCritical() << ">>> ОШИБКА WinAPI при возврате звука:" << GetLastError();
             failCount++;
         }
     }
@@ -1779,7 +1997,7 @@ void MainWindow::on_btnSaveTime_clicked()
     // 2. Записываем число внутрь .bat файла
     saveTimeToFile();
 
-    qDebug() << "Время сохранено!";
+    qInfo() << "Время сохранено!";
 
 }
 
@@ -1803,12 +2021,12 @@ void MainWindow::on_checkAutoOn_Off_toggled(bool checked)
         // 2. Если включили: сбрасываем флаг и запускаем таймер
         gtaWasRunning = false;
         checkTimer->start(2000); // Проверка каждые 2 сек
-        qDebug() << "Авто-режим .bat включен";
+        qInfo() << "Авто-режим .bat включен";
     } else {
         // 3. Если выключили: останавливаем таймер
         checkTimer->stop();
         gtaWasRunning = false;
-        qDebug() << "Авто-режим отключен.";
+        qInfo() << "Авто-режим отключен.";
     }
 }
 
@@ -1833,7 +2051,7 @@ void MainWindow::saveTimeToFile() {
 
         // Заменяем только этот сегмент строки
         content.replace(start, length, newTime);
-        qDebug() << "Обновлено время на:" << newTime;
+        qInfo() << "Обновлено время на:" << newTime;
     }
 
     if (file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
@@ -1890,7 +2108,7 @@ void MainWindow::on_leditTimeVvod_editingFinished()
     QSettings settings("MyCompany", "MyGameTool");
     settings.setValue("pauseTime", ui->leditTimeVvod->text());
     settings.sync(); // Принудительно сохраняем на диск
-    qDebug() << "Время сохранено в настройки:" << ui->leditTimeVvod->text();
+    qInfo() << "Время сохранено в настройки:" << ui->leditTimeVvod->text();
 }
 void MainWindow::runBatch() {
     saveTimeToFile(); // Сначала сохраняем актуальное время в файл
@@ -1904,7 +2122,7 @@ void MainWindow::runBatch() {
     // Запускаем батник. 5-й параметр (nativeDir) лечит ошибку с PsSuspend64
     ShellExecute(NULL, L"open", nativeFile.c_str(), NULL, nativeDir.c_str(), SW_SHOWNORMAL);
 
-    qDebug() << "Батник запущен";
+    qInfo() << "Батник запущен";
 }
 
 bool MainWindow::isValidRpfPath(const QString &filePath) {
@@ -1976,4 +2194,167 @@ void MainWindow::on_btnExitNF_clicked()
 {
     ui->oknoNF->setVisible(false);
     ui->btnExitNF->setVisible(false);
+}
+void MainWindow::on_btnAltV_clicked()
+{
+    blurEf(false);
+    ui->oknoGta5V->setVisible(false);
+    ui->cmbServer->setCurrentIndex(1);
+    m_soundSuccess->play();
+
+    // Если хочешь сразу сохранить в настройки:
+    QSettings settings("MyCompany", "MyGameTool");
+    settings.setValue("SelectedPlatform", 1);
+}
+void MainWindow::on_btnRage_clicked()
+{
+    blurEf(false);
+    ui->oknoGta5V->setVisible(false);
+    ui->cmbServer->setCurrentIndex(2);
+    m_soundSuccess->play();
+
+    // Если хочешь сразу сохранить в настройки:
+    QSettings settings("MyCompany", "MyGameTool");
+    settings.setValue("SelectedPlatform", 2);
+}
+void MainWindow::on_btnSettings_clicked()
+{
+    ui->oknoSettings->setVisible(true);
+    ui->btnExitGP->setVisible(true);
+    //настройки
+    QRect startRectST = ui->btnSettings->geometry();
+    QRect endRectST = ui->oknoSettings->geometry();
+
+    ui->oknoSettings->setGeometry(startRectST);
+    ui->oknoSettings->setVisible(true);
+
+    QPropertyAnimation *anim22 = new QPropertyAnimation(ui->oknoSettings, "geometry");
+    anim22->setDuration(400);
+    anim22->setStartValue(startRectST);
+    anim22->setEndValue(endRectST);
+    anim22->setEasingCurve(QEasingCurve::OutCubic);
+    anim22->start(QPropertyAnimation::DeleteWhenStopped);
+
+
+    QGraphicsOpacityEffect *eff22 = new QGraphicsOpacityEffect(this);
+    ui->oknoSettings->setGraphicsEffect(eff22);
+    ui->oknoSettings->setVisible(true);
+
+    QPropertyAnimation *ns = new QPropertyAnimation(eff22, "opacity");
+    ns->setDuration(50); // длительность в мс
+    ns->setStartValue(0);
+    ns->setEndValue(1);
+    ns->setEasingCurve(QEasingCurve::InBack); // тип сглаживания
+    ns->start(QPropertyAnimation::DeleteWhenStopped);
+
+    //закрыть окно
+    QRect startRectE = ui->btnSettings->geometry();
+    QRect endRectE = ui->btnExitGP->geometry();
+
+    ui->btnExitGP->setGeometry(startRectE);
+    ui->btnExitGP->setVisible(true);
+
+    QPropertyAnimation *anim3 = new QPropertyAnimation(ui->btnExitGP, "geometry");
+    anim3->setDuration(400);
+    anim3->setStartValue(startRectE);
+    anim3->setEndValue(endRectE);
+    anim3->setEasingCurve(QEasingCurve::OutCubic);
+    anim3->start(QPropertyAnimation::DeleteWhenStopped);
+
+
+    QGraphicsOpacityEffect *eff3 = new QGraphicsOpacityEffect(this);
+    ui->btnExitGP->setGraphicsEffect(eff3);
+    ui->btnExitGP->setVisible(true);
+
+    QPropertyAnimation *c = new QPropertyAnimation(eff3, "opacity");
+    c->setDuration(50); // длительность в мс
+    c->setStartValue(0);
+    c->setEndValue(1);
+    c->setEasingCurve(QEasingCurve::InBack); // тип сглаживания
+    c->start(QPropertyAnimation::DeleteWhenStopped);
+
+    ui->oknoGP->setVisible(false);
+    ui->oknoDiscleamer->setVisible(false);
+    ui->oknoHDD->setVisible(false);
+    ui->oknoZV->setVisible(false);
+}
+void MainWindow::on_cmbServer_currentIndexChanged(int index)
+{
+    if (index == 1) {
+        qInfo() << "Выбран AltV";
+        // Здесь твоя логика для AltV
+    } else if (index == 2) {
+        qInfo() << "Выбран RageMP";
+        // Логика для Rage
+    } else {
+        qInfo() << "Ничего не выбрано";
+    }
+    QSettings settings("MyCompany", "MyGameTool");
+    // Сохраняем индекс (например: 0 - Не выбрано, 1 - AltV, 2 - RageMP)
+    settings.setValue("SelectedPlatform", index);
+}
+void MainWindow::on_btnOpenLogs_clicked()
+{
+    // Получаем полный путь к файлу лога рядом с экзешником
+    QString logPath = QCoreApplication::applicationDirPath() + "/ReplaceX.log";
+
+    QFileInfo checkFile(logPath);
+    if (checkFile.exists()) {
+        // Вариант А: Просто открыть сам текстовый файл (в блокноте)
+        QDesktopServices::openUrl(QUrl::fromLocalFile(logPath));
+
+        // Вариант Б: Открыть ПАПКУ и выделить в ней этот файл (самый удобный вариант)
+        // На Windows это делается так:
+        QStringList args;
+        args << "/select," << QDir::toNativeSeparators(logPath);
+        QProcess::startDetached("explorer", args);
+    } else {
+        qInfo() << "Файл лога еще не создан:" << logPath;
+    }
+}
+void MainWindow::on_btnMajesticMods_clicked()
+{
+    QString MajesticMods = "https://majestic-mods.ru/";
+    QDesktopServices::openUrl(QUrl(MajesticMods));
+}
+void MainWindow::on_checkSound_toggled(bool checked)
+{
+    QSettings settings("MyCompany", "MyGameTool");
+
+    settings.setValue("Settings/SoundEnabled", checked);
+
+    settings.sync();
+
+    if (checked) {
+        qInfo() << "Звуковые уведомления включены";
+    } else {
+        qInfo() << "Звуковые уведомления выключены";
+    }
+}
+
+void MainWindow::on_checkSound_clicked()
+{
+    m_soundSuccess->play();
+}
+void MainWindow::on_checkKnopki_toggled(bool checked)
+{
+    QSettings settings("MyCompany", "MyGameTool");
+
+    settings.setValue("Settings/KnopkiEnable", checked);
+
+    settings.sync();
+    if(checked)
+    {
+        ui->btnReplaceRedux->setImagePath(":/izobr/Redux01-removebg-preview.png");
+        ui->btnReplaceOrig->setImagePath(":/izobr/Orig01.png");
+    }
+    else
+    {
+        ui->btnReplaceRedux->setImagePath("0");
+        ui->btnReplaceOrig->setImagePath("0");
+    }
+}
+void MainWindow::on_btnGaid_clicked()
+{
+    QDesktopServices::openUrl(QUrl("https://youtu.be/y7JQ1iXufUE?si=mqFOa9UK32hMu8UT"));
 }

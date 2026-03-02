@@ -16,6 +16,8 @@
 #include <QNetworkAccessManager>
 #include <QPainter>
 #include "fileworker.h"
+#include <QSoundEffect>
+
 
 
 QT_BEGIN_NAMESPACE
@@ -38,6 +40,13 @@ private:
     QThread *m_workerThread;
     FileWorker *m_worker;
 
+    QSoundEffect *m_soundSuccess;
+    QSoundEffect *m_soundError;
+
+
+    QTimer *onlineTimer;      // Таймер для авто-обновления
+    void updateOnlineStatus(); // Функция запроса к серверу
+
     // Переменные состояния
     bool m_isOperationPending = false; // Чтобы не запускать копирование дважды
 
@@ -45,6 +54,7 @@ private:
     FileWorker::Config getCurrentConfig();
 
     void setupSmoothMarquee(QString text);
+    bool m_gameStarted = false;
 
     QNetworkAccessManager *manager;
     const int MAX_RESTORE_ATTEMPTS = 5;      //Максимальное число попыток
@@ -82,7 +92,8 @@ private:
     QString batPath;
 
 
-
+    int i = 0;
+    bool OneOt = true;
 
     // Вспомогательные функции
     bool smartReplace(const QString &source, const QString &targetDir, const QString &targetFileName);
@@ -126,10 +137,12 @@ private:
     void saveTimeToFile();
     bool isBatchRunning = false;
     bool gtaWasRunning = false;
+    bool Y = false;
+    bool N = false;
     void runBatch();
     bool oknoDop = true;
     bool safeCopy(const QString &src, const QString &destFolder, bool isRestoring);
-
+    void blurEf(bool enable);
 signals:
     // Сигналы для управления рабочим потоком
     void requestInstall(FileWorker::Config config);
@@ -185,6 +198,14 @@ private slots:
     void on_btnNotification_clicked();
     void on_btnDownload_clicked();
     void on_btnExitNF_clicked();
+    void on_btnAltV_clicked();
+    void on_btnRage_clicked();
+    void on_btnSettings_clicked();
+    void on_btnOpenLogs_clicked();
+    void on_btnMajesticMods_clicked();
+    void on_cmbServer_currentIndexChanged(int index);
+    void on_checkSound_clicked();
+    void on_btnGaid_clicked();
     //процессы
     void handleProcessError(QProcess::ProcessError error);
     void handleProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
@@ -193,6 +214,8 @@ private slots:
 
 
     //Чекбоксы
+    void on_checkKnopki_toggled(bool checked);
+    void on_checkSound_toggled(bool checked);
     void on_checkAutoLoad_toggled(bool checked);      // Чекбокс: автозагрузка редукса
     void on_checkAutoLoadGP_toggled(bool checked);    // Чекбокс: автозагрузка GP
     void on_checkAutoLoadZV_toggled(bool checked);   // Чекбокс: автозагрузка звуков

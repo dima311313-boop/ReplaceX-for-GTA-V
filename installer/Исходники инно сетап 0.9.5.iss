@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "ReplaceX"
-#define MyAppVersion "0.9.4"
+#define MyAppVersion "0.9.5 beta"
 #define MyAppPublisher "My Company, Inc."
 #define MyAppURL "https://t.me/replacexDev"
 #define MyAppExeName "ReplaceX.exe"
@@ -13,7 +13,7 @@
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{E63BABE2-51B4-4D5D-AC32-07CDA1C9F881}
+AppId={{E7BD9B04-9E91-4F63-9959-2C39E09242F8}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -35,8 +35,8 @@ ChangesAssociations=yes
 DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
-OutputBaseFilename=ReplaceX 0.9.4_Install
-SetupIconFile=C:\Users\Admin\Downloads\photo_2026-01-15_107-25-59-round-corners.ico
+OutputBaseFilename=ReplaceX 0.9.5_Install
+SetupIconFile=C:\Users\Admin\Downloads\photo_2026-02-24_15-55-44.ico
 SolidCompression=yes
 WizardStyle=modern
 
@@ -76,8 +76,8 @@ Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\Admin\Desktop\Новая папка\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\Admin\Desktop\Новая папка\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\Users\Admin\Desktop\ReplaceX 0.9.5\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\Admin\Desktop\ReplaceX 0.9.5\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Registry]

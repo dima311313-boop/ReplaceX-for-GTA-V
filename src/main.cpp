@@ -26,7 +26,7 @@ void customMessageHandler(QtMsgType type, const QMessageLogContext &context, con
 
     // 2. ЗАПИСЬ В ФАЙЛ
     // Используем AppDirPath, но лучше QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
-    QFile logFile(QCoreApplication::applicationDirPath() + "/ReplaceX.log.txt");
+    QFile logFile(QCoreApplication::applicationDirPath() + "/ReplaceX.log");
     if (logFile.open(QFile::Append | QFile::Text)) {
         QTextStream out(&logFile);
         out << fullMessage << Qt::endl;
@@ -45,11 +45,13 @@ int main(int argc, char *argv[])
     qInstallMessageHandler(customMessageHandler);
 
     QApplication a(argc, argv);
-    QFile logFile(QCoreApplication::applicationDirPath() + "/ReplaceX.log.txt");
+    QFile logFile(QCoreApplication::applicationDirPath() + "/ReplaceX.log");
     if (logFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         logFile.close();
     }
     a.setStyle("Fusion");
+
+    a.setWindowIcon(QIcon(":/izobr/IconG.ico"));
 
     QCoreApplication::setOrganizationName("Replace X");
     QCoreApplication::setApplicationName("MyApp");

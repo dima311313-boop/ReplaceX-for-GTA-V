@@ -14,7 +14,8 @@ SOURCES += \
 HEADERS += \
     fileworker.h \
     mainwindow.h \
-    marqueelabel.h
+    marqueelabel.h \
+    modernbutton.h
 
 FORMS += \
     mainwindow.ui
@@ -29,10 +30,14 @@ QT += network
 
 win32: RC_FILE = resources.rc.txt
 
+QT += core gui widgets network multimedia  #multimedia
+
 RESOURCES += \
     resursi.qrc
 
 win32: LIBS += -luser32 -lkernel32
 
 LIBS += -lshell32
+
+DISTFILES +=
 

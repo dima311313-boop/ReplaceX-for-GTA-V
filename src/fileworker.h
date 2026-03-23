@@ -9,7 +9,14 @@
 #include <QThread>
 #include <windows.h>
 #include <tlhelp32.h>
-#include <QSoundEffect>
+#include <shellapi.h> // ОБЯЗАТЕЛЬНО
+#include <QObject>
+#include <QString>
+#include <QFileInfo>
+#include <QProcess>
+#include <QDebug>
+
+
 
 class FileWorker : public QObject
 {
@@ -21,31 +28,31 @@ public:
         QString reduxPath;
         QString originalPath;
         QString gameUpdatePath;
-
         QString gunPackSource;
         QString dlcPacksTarget;
         QString backupPath;
-
         QString soundModPath;
         QString sfxPath;
         QString soundBackupPath;
-
         bool useRedux;
         bool useGunPack;
         bool useSounds;
     };
 
 signals:
+    void unpackFinished(int type, QString resultPath);
+    void debugLog(const QString &msg);
     void progressMessage(QString message);
+    void progressValue(int value);
     void operationFinished(bool success, QString details);
     void statusUpdate(QString status);
+    void extractionFinished(bool success, const QString &fullPath);
+    void extractionStarted(); // To show "Extracting..." in UI
 
 public slots:
-    // Автоматические задачи
+    void processUnpack(int type, QString archivePath, QString originalUpdatePath);
     void processInstallation(FileWorker::Config config);
     void processRestoration(FileWorker::Config config);
-
-    // РУЧНЫЕ ЗАДАЧИ (Вынесены из MainWindow)
     void manualSmartReplace(const QString &source, const QString &targetDir, const QString &targetFileName);
     void manualRestoreGunPacks(FileWorker::Config config);
     void manualReplaceSounds(FileWorker::Config config);
@@ -53,16 +60,14 @@ public slots:
     void manualInstallGunPacks(FileWorker::Config config);
 
 private:
-    // Внутренние методы (все используют WinAPI)
+    bool winCopyPath(const QString &src, const QString &dst);
+    bool winRemovePath(const QString &path);
     bool smartReplace(const QString &source, const QString &targetDir, const QString &targetFileName);
-    bool copyDirectory(const QString &sourceDir, const QString &targetDir);
     bool installGunPacks(const QString &source, const QString &target, const QString &backup);
     bool restoreGunPacks(const QString &target, const QString &backup);
     void killGtaEcosystem();
-
-    // Вспомогательные методы для звуков
     bool internalReplaceSounds(const QString &modPath, const QString &sfxPath, const QString &backupPath);
     bool internalRestoreSounds(const QString &sfxPath, const QString &backupPath);
 };
 
-#endif // FILEWORKER_H
+#endif

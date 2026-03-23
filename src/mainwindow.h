@@ -43,6 +43,9 @@ private:
     QSoundEffect *m_soundSuccess;
     QSoundEffect *m_soundError;
 
+    void updatePresetsCombo();
+    void animateFadeOut(QWidget* target);
+    void applyModernShadow(QWidget* widget);
 
     QTimer *onlineTimer;      // Таймер для авто-обновления
     void updateOnlineStatus(); // Функция запроса к серверу
@@ -143,7 +146,11 @@ private:
     bool oknoDop = true;
     bool safeCopy(const QString &src, const QString &destFolder, bool isRestoring);
     void blurEf(bool enable);
+    void animateWindowOpen(QWidget* target, QWidget* sourceBtn);
+
 signals:
+    void requestUnpack(int type, QString archivePath, QString originalUpdatePath);
+    void requestExtraction(QString archivePath, QString fileName, QString targetFolder);
     // Сигналы для управления рабочим потоком
     void requestInstall(FileWorker::Config config);
     void requestRestore(FileWorker::Config config);
@@ -206,14 +213,25 @@ private slots:
     void on_cmbServer_currentIndexChanged(int index);
     void on_checkSound_clicked();
     void on_btnGaid_clicked();
+    void on_btnSavePreset_clicked();
+    void on_btnDeletePreset_clicked();
+    void on_cmbPresets_activated(int index);
+    void on_btnOpenPress_K_clicked();
+    void on_btnAutorskiPrava_clicked();
+    void on_btnArxivRedux_clicked();
+    void on_btnArxivGuns_clicked();
+    void on_btnArxivSounds_clicked();
+    void on_btnAutoCopyUpdate_clicked();
+
     //процессы
     void handleProcessError(QProcess::ProcessError error);
     void handleProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
     void readProcessOutput();
     void onResult(QNetworkReply *reply);
-
+    void onUnpackResult(int type, QString resultPath);
 
     //Чекбоксы
+    void on_chkAutoZagruzkaWin_stateChanged(int state);
     void on_checkKnopki_toggled(bool checked);
     void on_checkSound_toggled(bool checked);
     void on_checkAutoLoad_toggled(bool checked);      // Чекбокс: автозагрузка редукса

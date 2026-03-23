@@ -42,28 +42,48 @@
    <widget class="QLineEdit" name="leditRedux">
     <property name="geometry">
      <rect>
-      <x>140</x>
-      <y>90</y>
-      <width>301</width>
+      <x>110</x>
+      <y>93</y>
+      <width>311</width>
       <height>31</height>
      </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">QPushButton:hover {
+    background-color: #ff4081; /* розовый акцент при наведении */
+    border: 1px solid white;
+}
+QLineEdit:focus {
+    border: 1px solid #ff4081; /* подсвечиваем поле, когда юзер в нем */
+}
+</string>
     </property>
    </widget>
    <widget class="QLineEdit" name="leditOrig">
     <property name="geometry">
      <rect>
-      <x>140</x>
-      <y>170</y>
-      <width>301</width>
+      <x>110</x>
+      <y>171</y>
+      <width>311</width>
       <height>31</height>
      </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">QPushButton:hover {
+    background-color: #ff4081; /* розовый акцент при наведении */
+    border: 1px solid white;
+}
+QLineEdit:focus {
+    border: 1px solid #ff4081; /* подсвечиваем поле, когда юзер в нем */
+}
+</string>
     </property>
    </widget>
    <widget class="QCheckBox" name="checkAutoLoad">
     <property name="geometry">
      <rect>
-      <x>400</x>
-      <y>340</y>
+      <x>391</x>
+      <y>343</y>
       <width>41</width>
       <height>31</height>
      </rect>
@@ -76,6 +96,9 @@
     </property>
     <property name="autoFillBackground">
      <bool>false</bool>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">    border-radius: 5px;</string>
     </property>
     <property name="text">
      <string/>
@@ -158,17 +181,17 @@ QPushButton:pressed {
    <widget class="QLabel" name="lblAuto">
     <property name="geometry">
      <rect>
-      <x>210</x>
-      <y>340</y>
+      <x>224</x>
+      <y>342</y>
       <width>181</width>
       <height>31</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <family>System</family>
-      <pointsize>9</pointsize>
-      <bold>true</bold>
+      <family>Trebuchet MS</family>
+      <pointsize>10</pointsize>
+      <bold>false</bold>
      </font>
     </property>
     <property name="text">
@@ -178,28 +201,45 @@ QPushButton:pressed {
      <bool>false</bool>
     </property>
    </widget>
-   <widget class="QPushButton" name="btnAddRedux">
+   <widget class="QPushButton" name="btnArxivRedux">
     <property name="geometry">
      <rect>
-      <x>450</x>
-      <y>90</y>
+      <x>430</x>
+      <y>93</y>
       <width>41</width>
       <height>31</height>
      </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">QPushButton {
+    text-align: left;
+    padding-left: -2px; /* Регулируйте это число, чтобы двигать иконку */
+}
+QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
     </property>
     <property name="text">
      <string/>
     </property>
     <property name="icon">
-     <iconset theme="QIcon::ThemeIcon::FolderOpen"/>
+     <iconset resource="resursi.qrc">
+      <normaloff>:/izobr/Palochka.png</normaloff>:/izobr/Palochka.png</iconset>
+    </property>
+    <property name="iconSize">
+     <size>
+      <width>37</width>
+      <height>37</height>
+     </size>
     </property>
    </widget>
    <widget class="QPushButton" name="btnDonat">
     <property name="geometry">
      <rect>
-      <x>550</x>
+      <x>541</x>
       <y>0</y>
-      <width>50</width>
+      <width>51</width>
       <height>50</height>
      </rect>
     </property>
@@ -208,12 +248,12 @@ QPushButton:pressed {
     </property>
     <property name="icon">
      <iconset resource="resursi.qrc">
-      <normaloff>:/izobr/png-klev-club-bgmd-p-logotip-doneishen-alerts-png-4.png</normaloff>:/izobr/png-klev-club-bgmd-p-logotip-doneishen-alerts-png-4.png</iconset>
+      <normaloff>:/izobr/png-klev-club-bdoc-p-logotip-doneishen-alerts-png-1-round-corners.png</normaloff>:/izobr/png-klev-club-bdoc-p-logotip-doneishen-alerts-png-1-round-corners.png</iconset>
     </property>
     <property name="iconSize">
      <size>
-      <width>34</width>
-      <height>49</height>
+      <width>60</width>
+      <height>54</height>
      </size>
     </property>
     <property name="shortcut">
@@ -250,14 +290,24 @@ QPushButton:pressed {
       <height>31</height>
      </rect>
     </property>
+    <property name="styleSheet">
+     <string notr="true">QPushButton:hover {
+    background-color: #ff4081; /* розовый акцент при наведении */
+    border: 1px solid white;
+}
+QLineEdit:focus {
+    border: 1px solid #ff4081; /* подсвечиваем поле, когда юзер в нем */
+}
+</string>
+    </property>
    </widget>
    <widget class="QGroupBox" name="grbRedux">
     <property name="geometry">
      <rect>
-      <x>130</x>
-      <y>60</y>
-      <width>371</width>
-      <height>71</height>
+      <x>100</x>
+      <y>66</y>
+      <width>431</width>
+      <height>69</height>
      </rect>
     </property>
     <property name="font">
@@ -273,10 +323,10 @@ QPushButton:pressed {
    <widget class="QGroupBox" name="grbOrig">
     <property name="geometry">
      <rect>
-      <x>130</x>
-      <y>140</y>
-      <width>371</width>
-      <height>71</height>
+      <x>100</x>
+      <y>145</y>
+      <width>431</width>
+      <height>67</height>
      </rect>
     </property>
     <property name="font">
@@ -291,11 +341,17 @@ QPushButton:pressed {
     <widget class="QPushButton" name="btnAddOrig">
      <property name="geometry">
       <rect>
-       <x>320</x>
-       <y>30</y>
+       <x>380</x>
+       <y>26</y>
        <width>41</width>
        <height>31</height>
       </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
      </property>
      <property name="text">
       <string/>
@@ -310,7 +366,7 @@ QPushButton:pressed {
      <rect>
       <x>100</x>
       <y>220</y>
-      <width>421</width>
+      <width>431</width>
       <height>71</height>
      </rect>
     </property>
@@ -338,6 +394,12 @@ QPushButton:pressed {
        <pointsize>9</pointsize>
       </font>
      </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
+     </property>
      <property name="text">
       <string>Auto</string>
      </property>
@@ -351,6 +413,12 @@ QPushButton:pressed {
        <height>31</height>
       </rect>
      </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
+     </property>
      <property name="text">
       <string/>
      </property>
@@ -362,7 +430,7 @@ QPushButton:pressed {
    <widget class="QPushButton" name="btnTelegram">
     <property name="geometry">
      <rect>
-      <x>600</x>
+      <x>595</x>
       <y>0</y>
       <width>50</width>
       <height>50</height>
@@ -373,6 +441,12 @@ QPushButton:pressed {
       <width>50</width>
       <height>50</height>
      </size>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">QPushButton {
+    background-color: transparent; /* Полностью прозрачный фон */
+    border: none;                 /* Убираем рамку */
+}</string>
     </property>
     <property name="text">
      <string/>
@@ -419,6 +493,23 @@ QPushButton:pressed {
       <height>291</height>
      </rect>
     </property>
+    <property name="styleSheet">
+     <string notr="true">QWidget#QFrame {
+    background-color: #1e1e1e;
+    
+    /* Убираем саму линию рамки */
+    border: none; 
+    
+    /* Радиусы оставляем — они будут обрезать фон, а не рамку */
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    
+    outline: none;
+    border: none; 
+}</string>
+    </property>
     <property name="frameShape">
      <enum>QFrame::Shape::StyledPanel</enum>
     </property>
@@ -428,11 +519,17 @@ QPushButton:pressed {
     <widget class="QPushButton" name="btnPapkaGP">
      <property name="geometry">
       <rect>
-       <x>370</x>
+       <x>400</x>
        <y>70</y>
        <width>41</width>
        <height>31</height>
       </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
      </property>
      <property name="text">
       <string/>
@@ -444,27 +541,37 @@ QPushButton:pressed {
     <widget class="QLineEdit" name="leditGunPuck">
      <property name="geometry">
       <rect>
-       <x>50</x>
+       <x>30</x>
        <y>70</y>
-       <width>301</width>
+       <width>311</width>
        <height>31</height>
       </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #ff4081; /* розовый акцент при наведении */
+    border: 1px solid white;
+}
+QLineEdit:focus {
+    border: 1px solid #ff4081; /* подсвечиваем поле, когда юзер в нем */
+}
+</string>
      </property>
     </widget>
     <widget class="QLabel" name="label">
      <property name="geometry">
       <rect>
-       <x>170</x>
+       <x>165</x>
        <y>0</y>
        <width>151</width>
-       <height>16</height>
+       <height>21</height>
       </rect>
      </property>
      <property name="font">
       <font>
-       <family>Source Code Pro</family>
-       <pointsize>10</pointsize>
-       <bold>true</bold>
+       <family>Trebuchet MS</family>
+       <pointsize>11</pointsize>
+       <bold>false</bold>
       </font>
      </property>
      <property name="text">
@@ -479,6 +586,12 @@ QPushButton:pressed {
        <width>41</width>
        <height>31</height>
       </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
      </property>
      <property name="text">
       <string/>
@@ -495,6 +608,16 @@ QPushButton:pressed {
        <width>311</width>
        <height>31</height>
       </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #ff4081; /* розовый акцент при наведении */
+    border: 1px solid white;
+}
+QLineEdit:focus {
+    border: 1px solid #ff4081; /* подсвечиваем поле, когда юзер в нем */
+}
+</string>
      </property>
     </widget>
     <widget class="QLabel" name="lblAutoGP">
@@ -569,6 +692,12 @@ QPushButton:pressed {
        <pointsize>9</pointsize>
       </font>
      </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
+     </property>
      <property name="text">
       <string>Auto</string>
      </property>
@@ -576,21 +705,54 @@ QPushButton:pressed {
     <widget class="QGroupBox" name="groupBox">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>40</y>
-       <width>391</width>
+       <width>431</width>
        <height>71</height>
       </rect>
      </property>
      <property name="font">
       <font>
-       <family>Sitka</family>
+       <family>Source Code Pro</family>
        <pointsize>10</pointsize>
       </font>
      </property>
      <property name="title">
       <string>Папка с ган паками</string>
      </property>
+     <widget class="QPushButton" name="btnArxivGuns">
+      <property name="geometry">
+       <rect>
+        <x>330</x>
+        <y>30</y>
+        <width>41</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QPushButton {
+    text-align: left;
+    padding-left: -2px; /* Регулируйте это число, чтобы двигать иконку */
+}
+QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="icon">
+       <iconset resource="resursi.qrc">
+        <normaloff>:/izobr/Palochka.png</normaloff>:/izobr/Palochka.png</iconset>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>37</width>
+        <height>37</height>
+       </size>
+      </property>
+     </widget>
     </widget>
     <widget class="QGroupBox" name="groupBox_2">
      <property name="geometry">
@@ -603,7 +765,7 @@ QPushButton:pressed {
      </property>
      <property name="font">
       <font>
-       <family>Sitka</family>
+       <family>Source Code Pro Medium</family>
        <pointsize>10</pointsize>
       </font>
      </property>
@@ -673,7 +835,7 @@ QPushButton:pressed {
       <string>Original</string>
      </property>
     </widget>
-    <widget class="QListView" name="listView">
+    <widget class="QListView" name="listDs_2">
      <property name="geometry">
       <rect>
        <x>0</x>
@@ -682,8 +844,23 @@ QPushButton:pressed {
        <height>291</height>
       </rect>
      </property>
+     <property name="styleSheet">
+      <string notr="true">QListWidget, QListView {
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    background-color: #1e1e1e; /* Темный цвет фона */
+    border: 1px solid white;   /* Белая обводка толщиной 1 пиксель */
+    color: white;              /* Убедимся, что текст внутри тоже белый */
+    padding: 5px;              /* Небольшой отступ внутри рамки */
+}
+</string>
+     </property>
     </widget>
-    <zorder>listView</zorder>
+    <zorder>listDs_2</zorder>
     <zorder>label</zorder>
     <zorder>lblAutoGP</zorder>
     <zorder>checkAutoLoadGP</zorder>
@@ -701,19 +878,35 @@ QPushButton:pressed {
     <property name="geometry">
      <rect>
       <x>559</x>
-      <y>343</y>
+      <y>345</y>
       <width>91</width>
       <height>31</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <family>Source Code Pro Medium</family>
-      <pointsize>10</pointsize>
+      <family>Segoe UI Variable</family>
+      <pointsize>9</pointsize>
      </font>
     </property>
+    <property name="styleSheet">
+     <string notr="true"> QPushButton {   border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 0px;
+    color: white;              /* Убедимся, что текст внутри тоже белый */
+    background-color: #47474d; /* Темный цвет фона */
+    border: 1px solid white;   /* Белая обводка толщиной 1 пиксель */
+    padding: 5px;              /* Небольшой отступ внутри рамки */
+}
+QPushButton:hover {
+    background-color: rgba(255, 255, 255, 20); /* Легкий отсвет при наведении (по желанию) */
+}
+
+</string>
+    </property>
     <property name="text">
-     <string>Доп.</string>
+     <string>Доп. Функции</string>
     </property>
    </widget>
    <widget class="QFrame" name="oknoKnopohki">
@@ -724,6 +917,16 @@ QPushButton:pressed {
       <width>71</width>
       <height>291</height>
      </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">QWidget#oknoKnopohki {
+    background-color: #1e1e1e; /* Твой цвет фона */
+    border: 1px solid #333;
+    border-top-left-radius: 20px;
+    border-bottom-left-radius: 20px;
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+}</string>
     </property>
     <property name="frameShape">
      <enum>QFrame::Shape::StyledPanel</enum>
@@ -742,46 +945,34 @@ QPushButton:pressed {
      </property>
      <property name="styleSheet">
       <string notr="true">QListWidget, QListView {
-    background-color: #1e1e1e; /* Темный цвет фона */
+    border: 1px solid #333;
+    border-top-left-radius: 20px;
+    border-bottom-left-radius: 20px;
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+	background-color: #1e1e1e; /* Темный цвет фона */
     border: 1px solid white;   /* Белая обводка толщиной 1 пиксель */
     color: white;              /* Убедимся, что текст внутри тоже белый */
     padding: 5px;              /* Небольшой отступ внутри рамки */
+	background-color: #1e1e1e; /* Твой цвет фона */
 }
 </string>
-     </property>
-    </widget>
-    <widget class="QPushButton" name="btnGanpacOpen">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>30</y>
-       <width>51</width>
-       <height>41</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <family>Impact</family>
-      </font>
-     </property>
-     <property name="text">
-      <string>Gunpack</string>
      </property>
     </widget>
     <widget class="QLabel" name="label_4">
      <property name="geometry">
       <rect>
-       <x>0</x>
-       <y>0</y>
-       <width>71</width>
+       <x>6</x>
+       <y>6</y>
+       <width>64</width>
        <height>20</height>
       </rect>
      </property>
      <property name="font">
       <font>
-       <family>Unispace</family>
-       <pointsize>8</pointsize>
-       <bold>true</bold>
+       <family>Verdana</family>
+       <pointsize>7</pointsize>
+       <bold>false</bold>
       </font>
      </property>
      <property name="styleSheet">
@@ -793,40 +984,191 @@ QPushButton:pressed {
       <string>Установить:</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="btnZVOpen">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>90</y>
-       <width>51</width>
-       <height>41</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <family>Impact</family>
-      </font>
-     </property>
-     <property name="text">
-      <string>Звуки</string>
-     </property>
-    </widget>
     <widget class="QPushButton" name="btnHDD_OpenDis">
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>150</y>
+       <y>155</y>
        <width>51</width>
        <height>41</height>
       </rect>
      </property>
      <property name="font">
       <font>
-       <family>Impact</family>
+       <family>Gill Sans MT</family>
       </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
      </property>
      <property name="text">
       <string>HDD</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnOpenPress_K">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>215</y>
+       <width>51</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Comic Sans MS</family>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
+     </property>
+     <property name="text">
+      <string>Presset</string>
+     </property>
+    </widget>
+    <widget class="Line" name="line_4">
+     <property name="geometry">
+      <rect>
+       <x>1</x>
+       <y>15</y>
+       <width>68</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+    <widget class="Line" name="line_5">
+     <property name="geometry">
+      <rect>
+       <x>1</x>
+       <y>75</y>
+       <width>68</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+    <widget class="Line" name="line_6">
+     <property name="geometry">
+      <rect>
+       <x>1</x>
+       <y>135</y>
+       <width>68</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+    <widget class="Line" name="line_7">
+     <property name="geometry">
+      <rect>
+       <x>1</x>
+       <y>195</y>
+       <width>68</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+    <widget class="Line" name="line_8">
+     <property name="geometry">
+      <rect>
+       <x>1</x>
+       <y>255</y>
+       <width>68</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnZVOpen">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>95</y>
+       <width>51</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Gill Sans MT</family>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
+     </property>
+     <property name="text">
+      <string>Sounds</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnGanpacOpen">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>35</y>
+       <width>51</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Gill Sans MT</family>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
+     </property>
+     <property name="text">
+      <string>Ganpack</string>
+     </property>
+    </widget>
+    <widget class="Line" name="lineV">
+     <property name="geometry">
+      <rect>
+       <x>1</x>
+       <y>205</y>
+       <width>5</width>
+       <height>60</height>
+      </rect>
+     </property>
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">	background-color: #e9775b;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;</string>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
      </property>
     </widget>
    </widget>
@@ -838,6 +1180,23 @@ QPushButton:pressed {
       <width>471</width>
       <height>291</height>
      </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">QFrame{
+    background-color: #1e1e1e;
+    
+    /* Убираем саму линию рамки */
+    border: none; 
+    
+    /* Радиусы оставляем — они будут обрезать фон, а не рамку */
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    
+    outline: none;
+    border: none; 
+}</string>
     </property>
     <property name="frameShape">
      <enum>QFrame::Shape::StyledPanel</enum>
@@ -856,6 +1215,12 @@ QPushButton:pressed {
      </property>
      <property name="styleSheet">
       <string notr="true">QListWidget, QListView {
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
     background-color: #1e1e1e; /* Темный цвет фона */
     border: 1px solid white;   /* Белая обводка толщиной 1 пиксель */
     color: white;              /* Убедимся, что текст внутри тоже белый */
@@ -867,7 +1232,7 @@ QPushButton:pressed {
     <widget class="QLabel" name="labelDis">
      <property name="geometry">
       <rect>
-       <x>130</x>
+       <x>132</x>
        <y>20</y>
        <width>211</width>
        <height>41</height>
@@ -894,7 +1259,7 @@ QPushButton:pressed {
      <property name="geometry">
       <rect>
        <x>40</x>
-       <y>80</y>
+       <y>90</y>
        <width>411</width>
        <height>131</height>
       </rect>
@@ -918,22 +1283,23 @@ QPushButton:pressed {
       <bool>true</bool>
      </property>
     </widget>
-   </widget>
-   <widget class="QPushButton" name="btnExitGP">
-    <property name="geometry">
-     <rect>
-      <x>570</x>
-      <y>30</y>
-      <width>31</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-    <property name="icon">
-     <iconset theme="QIcon::ThemeIcon::ApplicationExit"/>
-    </property>
+    <widget class="Line" name="line_10">
+     <property name="geometry">
+      <rect>
+       <x>3</x>
+       <y>67</y>
+       <width>465</width>
+       <height>1</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">border: 1px solid #4a4a4a; 
+</string>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
    </widget>
    <widget class="QFrame" name="oknoZV">
     <property name="geometry">
@@ -944,6 +1310,23 @@ QPushButton:pressed {
       <height>291</height>
      </rect>
     </property>
+    <property name="styleSheet">
+     <string notr="true">QWidget#oknoGP, QWidget#oknoZV, QWidget#oknoPresets {
+    background-color: #1e1e1e;
+    
+    /* Убираем саму линию рамки */
+    border: none; 
+    
+    /* Радиусы оставляем — они будут обрезать фон, а не рамку */
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    
+    outline: none;
+    border: none; 
+}</string>
+    </property>
     <property name="frameShape">
      <enum>QFrame::Shape::StyledPanel</enum>
     </property>
@@ -953,11 +1336,17 @@ QPushButton:pressed {
     <widget class="QPushButton" name="btnPapkaZV">
      <property name="geometry">
       <rect>
-       <x>370</x>
+       <x>400</x>
        <y>70</y>
        <width>41</width>
        <height>31</height>
       </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
      </property>
      <property name="text">
       <string/>
@@ -969,27 +1358,37 @@ QPushButton:pressed {
     <widget class="QLineEdit" name="leditModZV">
      <property name="geometry">
       <rect>
-       <x>50</x>
+       <x>30</x>
        <y>70</y>
-       <width>301</width>
+       <width>311</width>
        <height>31</height>
       </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #ff4081; /* розовый акцент при наведении */
+    border: 1px solid white;
+}
+QLineEdit:focus {
+    border: 1px solid #ff4081; /* подсвечиваем поле, когда юзер в нем */
+}
+</string>
      </property>
     </widget>
     <widget class="QLabel" name="label_5">
      <property name="geometry">
       <rect>
        <x>120</x>
-       <y>0</y>
-       <width>241</width>
+       <y>4</y>
+       <width>231</width>
        <height>16</height>
       </rect>
      </property>
      <property name="font">
       <font>
-       <family>Source Code Pro</family>
-       <pointsize>10</pointsize>
-       <bold>true</bold>
+       <family>Trebuchet MS</family>
+       <pointsize>11</pointsize>
+       <bold>false</bold>
       </font>
      </property>
      <property name="styleSheet">
@@ -1010,6 +1409,11 @@ QPushButton:pressed {
        <height>31</height>
       </rect>
      </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}</string>
+     </property>
      <property name="text">
       <string/>
      </property>
@@ -1026,11 +1430,21 @@ QPushButton:pressed {
        <height>31</height>
       </rect>
      </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #ff4081; /* розовый акцент при наведении */
+    border: 1px solid white;
+}
+QLineEdit:focus {
+    border: 1px solid #ff4081; /* подсвечиваем поле, когда юзер в нем */
+}
+</string>
+     </property>
     </widget>
     <widget class="QLabel" name="lblAutoGP_3">
      <property name="geometry">
       <rect>
-       <x>130</x>
+       <x>136</x>
        <y>250</y>
        <width>181</width>
        <height>31</height>
@@ -1038,9 +1452,9 @@ QPushButton:pressed {
      </property>
      <property name="font">
       <font>
-       <family>System</family>
-       <pointsize>9</pointsize>
-       <bold>true</bold>
+       <family>Trebuchet MS</family>
+       <pointsize>10</pointsize>
+       <bold>false</bold>
       </font>
      </property>
      <property name="styleSheet">
@@ -1058,7 +1472,7 @@ QPushButton:pressed {
     <widget class="QCheckBox" name="checkAutoLoadZV">
      <property name="geometry">
       <rect>
-       <x>320</x>
+       <x>311</x>
        <y>250</y>
        <width>41</width>
        <height>31</height>
@@ -1104,6 +1518,11 @@ QPushButton:pressed {
        <pointsize>9</pointsize>
       </font>
      </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}</string>
+     </property>
      <property name="text">
       <string>Auto</string>
      </property>
@@ -1111,15 +1530,15 @@ QPushButton:pressed {
     <widget class="QGroupBox" name="groupBox_5">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>40</y>
-       <width>391</width>
+       <width>431</width>
        <height>71</height>
       </rect>
      </property>
      <property name="font">
       <font>
-       <family>Sitka</family>
+       <family>Source Code Pro Medium</family>
        <pointsize>10</pointsize>
       </font>
      </property>
@@ -1131,6 +1550,39 @@ QPushButton:pressed {
      <property name="title">
       <string>Папка с модифицированными звуками</string>
      </property>
+     <widget class="QPushButton" name="btnArxivSounds">
+      <property name="geometry">
+       <rect>
+        <x>330</x>
+        <y>30</y>
+        <width>41</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QPushButton {
+    text-align: left;
+    padding-left: -2px; /* Регулируйте это число, чтобы двигать иконку */
+}
+QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="icon">
+       <iconset resource="resursi.qrc">
+        <normaloff>:/izobr/Palochka.png</normaloff>:/izobr/Palochka.png</iconset>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>37</width>
+        <height>37</height>
+       </size>
+      </property>
+     </widget>
     </widget>
     <widget class="QGroupBox" name="groupBox_6">
      <property name="geometry">
@@ -1143,7 +1595,7 @@ QPushButton:pressed {
      </property>
      <property name="font">
       <font>
-       <family>Sitka</family>
+       <family>Source Code Pro Medium</family>
        <pointsize>10</pointsize>
       </font>
      </property>
@@ -1229,6 +1681,12 @@ QPushButton:pressed {
      </property>
      <property name="styleSheet">
       <string notr="true">QListWidget, QListView {
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
     background-color: #1e1e1e; /* Темный цвет фона */
     border: 1px solid white;   /* Белая обводка толщиной 1 пиксель */
     color: white;              /* Убедимся, что текст внутри тоже белый */
@@ -1258,6 +1716,23 @@ QPushButton:pressed {
       <width>471</width>
       <height>291</height>
      </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">QFrame {
+    background-color: #1e1e1e;
+    
+    /* Убираем саму линию рамки */
+    border: none; 
+    
+    /* Радиусы оставляем — они будут обрезать фон, а не рамку */
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    
+    outline: none;
+    border: none; 
+}</string>
     </property>
     <property name="frameShape">
      <enum>QFrame::Shape::StyledPanel</enum>
@@ -1434,6 +1909,12 @@ QPushButton:pressed {
      </property>
      <property name="styleSheet">
       <string notr="true">QListWidget, QListView {
+	background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
     background-color: #1e1e1e; /* Темный цвет фона */
     border: 1px solid white;   /* Белая обводка толщиной 1 пиксель */
     color: white;              /* Убедимся, что текст внутри тоже белый */
@@ -1452,6 +1933,12 @@ QPushButton:pressed {
      </property>
      <property name="styleSheet">
       <string notr="true">QListWidget, QListView {
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
     background-color: #1e1e1e; /* Темный цвет фона */
     border: 1px solid white;   /* Белая обводка толщиной 1 пиксель */
     color: white;              /* Убедимся, что текст внутри тоже белый */
@@ -1517,17 +2004,17 @@ QPushButton:pressed {
     <widget class="QLabel" name="lblZader">
      <property name="geometry">
       <rect>
-       <x>90</x>
-       <y>0</y>
+       <x>105</x>
+       <y>5</y>
        <width>281</width>
-       <height>21</height>
+       <height>16</height>
       </rect>
      </property>
      <property name="font">
       <font>
-       <family>Source Code Pro</family>
-       <pointsize>10</pointsize>
-       <bold>true</bold>
+       <family>Trebuchet MS</family>
+       <pointsize>11</pointsize>
+       <bold>false</bold>
       </font>
      </property>
      <property name="styleSheet">
@@ -1550,29 +2037,10 @@ QPushButton:pressed {
     <zorder>lblInstrucktion</zorder>
     <zorder>lblZader</zorder>
    </widget>
-   <widget class="QLabel" name="label_2">
-    <property name="geometry">
-     <rect>
-      <x>490</x>
-      <y>360</y>
-      <width>71</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <family>Berlin Sans FB</family>
-      <pointsize>8</pointsize>
-     </font>
-    </property>
-    <property name="text">
-     <string>ReplaceX 0.9.5 </string>
-    </property>
-   </widget>
    <widget class="MarqueeLabel" name="marqueeLabel">
     <property name="geometry">
      <rect>
-      <x>510</x>
+      <x>508</x>
       <y>50</y>
       <width>141</width>
       <height>31</height>
@@ -1762,13 +2230,11 @@ QPushButton:pressed {
      </rect>
     </property>
     <property name="styleSheet">
-     <string notr="true">/* Вставлять в styleSheet для oknoGta5V */
-#oknoGta5V {
-    background-color: #2b2b2b; /* Твой цвет фона */
-    border-radius: 15px;       /* Радиус закругления */
-    border: 1px solid #3f3f3f; /* Тонкая рамка, чтобы окно не сливалось с блюром */
-}
-</string>
+     <string notr="true">#oknoGta5V {
+background-color: #2b2b2b;
+border-radius: 15рx;
+border: 1px solid #3f3f3f;
+}</string>
     </property>
     <property name="frameShape">
      <enum>QFrame::Shape::StyledPanel</enum>
@@ -1967,7 +2433,7 @@ QPushButton#btnRage:hover {
    <widget class="QPushButton" name="btnSettings">
     <property name="geometry">
      <rect>
-      <x>500</x>
+      <x>493</x>
       <y>0</y>
       <width>50</width>
       <height>50</height>
@@ -1984,11 +2450,9 @@ QPushButton#btnRage:hover {
     background-color: transparent; /* Полностью прозрачный фон */
     border: none;                 /* Убираем рамку */
 }
-
 QPushButton:hover {
     background-color: rgba(255, 255, 255, 20); /* Легкий отсвет при наведении (по желанию) */
 }
-
 </string>
     </property>
     <property name="text">
@@ -2013,6 +2477,12 @@ QPushButton:hover {
       <width>511</width>
       <height>301</height>
      </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">border-radius: 20px;
+color: #ffffff; 
+border: none;       /* Убирает любую рамку */
+outline: none;      /* Убирает контур фокуса */</string>
     </property>
     <property name="frameShape">
      <enum>QFrame::Shape::StyledPanel</enum>
@@ -2041,7 +2511,7 @@ QPushButton:hover {
     <widget class="QLabel" name="lblZader_2">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>219</x>
        <y>0</y>
        <width>81</width>
        <height>21</height>
@@ -2049,9 +2519,9 @@ QPushButton:hover {
      </property>
      <property name="font">
       <font>
-       <family>Source Code Pro</family>
-       <pointsize>10</pointsize>
-       <bold>true</bold>
+       <family>Trebuchet MS</family>
+       <pointsize>11</pointsize>
+       <bold>false</bold>
       </font>
      </property>
      <property name="styleSheet">
@@ -2066,7 +2536,7 @@ QPushButton:hover {
     <widget class="QLabel" name="label_10">
      <property name="geometry">
       <rect>
-       <x>40</x>
+       <x>20</x>
        <y>50</y>
        <width>151</width>
        <height>21</height>
@@ -2090,7 +2560,7 @@ QPushButton:hover {
     <widget class="QComboBox" name="cmbServer">
      <property name="geometry">
       <rect>
-       <x>200</x>
+       <x>180</x>
        <y>50</y>
        <width>161</width>
        <height>31</height>
@@ -2137,8 +2607,8 @@ QAbstractItemView {
     <widget class="QLineEdit" name="leditLogsFile">
      <property name="geometry">
       <rect>
-       <x>200</x>
-       <y>110</y>
+       <x>207</x>
+       <y>96</y>
        <width>251</width>
        <height>31</height>
       </rect>
@@ -2147,8 +2617,8 @@ QAbstractItemView {
     <widget class="QLabel" name="label_11">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>120</y>
+       <x>22</x>
+       <y>100</y>
        <width>181</width>
        <height>21</height>
       </rect>
@@ -2171,11 +2641,20 @@ QAbstractItemView {
     <widget class="QPushButton" name="btnOpenLogs">
      <property name="geometry">
       <rect>
-       <x>460</x>
-       <y>110</y>
+       <x>467</x>
+       <y>97</y>
        <width>31</width>
        <height>31</height>
       </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton{
+    background-color: #47474d; /* Темный цвет фона */
+}
+QPushButton:hover {
+    background-color: rgba(255, 255, 255, 20); /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
      </property>
      <property name="text">
       <string/>
@@ -2187,10 +2666,10 @@ QAbstractItemView {
     <widget class="QPushButton" name="btnMajesticMods">
      <property name="geometry">
       <rect>
-       <x>419</x>
-       <y>280</y>
-       <width>91</width>
-       <height>21</height>
+       <x>417</x>
+       <y>289</y>
+       <width>81</width>
+       <height>10</height>
       </rect>
      </property>
      <property name="styleSheet">
@@ -2213,7 +2692,7 @@ QPushButton:hover {
      </property>
      <property name="iconSize">
       <size>
-       <width>90</width>
+       <width>82</width>
        <height>40</height>
       </size>
      </property>
@@ -2221,16 +2700,17 @@ QPushButton:hover {
     <widget class="QLabel" name="label_12">
      <property name="geometry">
       <rect>
-       <x>290</x>
-       <y>280</y>
-       <width>121</width>
+       <x>265</x>
+       <y>283</y>
+       <width>155</width>
        <height>20</height>
       </rect>
      </property>
      <property name="font">
       <font>
-       <family>Segoe UI Variable</family>
+       <family>Unispace</family>
        <pointsize>6</pointsize>
+       <bold>true</bold>
       </font>
      </property>
      <property name="styleSheet">
@@ -2245,8 +2725,8 @@ QPushButton:hover {
     <widget class="QCheckBox" name="checkSound">
      <property name="geometry">
       <rect>
-       <x>150</x>
-       <y>170</y>
+       <x>160</x>
+       <y>210</y>
        <width>41</width>
        <height>21</height>
       </rect>
@@ -2258,8 +2738,8 @@ QPushButton:hover {
     <widget class="QLabel" name="label_13">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>160</y>
+       <x>24</x>
+       <y>200</y>
        <width>131</width>
        <height>41</height>
       </rect>
@@ -2276,8 +2756,8 @@ QPushButton:hover {
     <widget class="QCheckBox" name="checkKnopki">
      <property name="geometry">
       <rect>
-       <x>470</x>
-       <y>170</y>
+       <x>290</x>
+       <y>140</y>
        <width>41</width>
        <height>21</height>
       </rect>
@@ -2289,8 +2769,8 @@ QPushButton:hover {
     <widget class="QLabel" name="label_14">
      <property name="geometry">
       <rect>
-       <x>200</x>
-       <y>160</y>
+       <x>22</x>
+       <y>130</y>
        <width>261</width>
        <height>41</height>
       </rect>
@@ -2307,8 +2787,8 @@ QPushButton:hover {
     <widget class="QLabel" name="label_15">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>210</y>
+       <x>23</x>
+       <y>239</y>
        <width>111</width>
        <height>31</height>
       </rect>
@@ -2330,8 +2810,8 @@ QPushButton:hover {
     <widget class="QPushButton" name="btnGaid">
      <property name="geometry">
       <rect>
-       <x>130</x>
-       <y>210</y>
+       <x>140</x>
+       <y>240</y>
        <width>41</width>
        <height>31</height>
       </rect>
@@ -2361,11 +2841,42 @@ QPushButton:hover {
       </size>
      </property>
     </widget>
+    <widget class="QCheckBox" name="chkAutoZagruzkaWin">
+     <property name="geometry">
+      <rect>
+       <x>170</x>
+       <y>176</y>
+       <width>18</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_16">
+     <property name="geometry">
+      <rect>
+       <x>23</x>
+       <y>169</y>
+       <width>139</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+    color: #dcdce3; /* SeaShell - чуть теплее, кремовый */
+}</string>
+     </property>
+     <property name="text">
+      <string>Автозапуск приложения:</string>
+     </property>
+    </widget>
    </widget>
    <widget class="QLabel" name="lblOnline">
     <property name="geometry">
      <rect>
-      <x>550</x>
+      <x>556</x>
       <y>80</y>
       <width>91</width>
       <height>21</height>
@@ -2381,6 +2892,314 @@ QPushButton:hover {
      <string/>
     </property>
    </widget>
+   <widget class="QFrame" name="oknoPresets">
+    <property name="geometry">
+     <rect>
+      <x>130</x>
+      <y>30</y>
+      <width>471</width>
+      <height>291</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">QWidget#oknoGP, QWidget#oknoZV, QWidget#oknoPresets {
+    background-color: #1e1e1e;
+    
+    /* Убираем саму линию рамки */
+    border: none; 
+    
+    /* Радиусы оставляем — они будут обрезать фон, а не рамку */
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    
+    border: none; 
+    outline: none;
+}</string>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Shape::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Shadow::Raised</enum>
+    </property>
+    <widget class="QLabel" name="label_18">
+     <property name="geometry">
+      <rect>
+       <x>165</x>
+       <y>0</y>
+       <width>151</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Trebuchet MS</family>
+       <pointsize>11</pointsize>
+       <bold>false</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Установить прессет</string>
+     </property>
+    </widget>
+    <widget class="QListView" name="listView_9">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>471</width>
+       <height>291</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QListWidget, QListView {
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    background-color: #1e1e1e; /* Темный цвет фона */
+    border: 1px solid white;   /* Белая обводка толщиной 1 пиксель */
+    color: white;              /* Убедимся, что текст внутри тоже белый */
+    padding: 5px;              /* Небольшой отступ внутри рамки */
+}</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="cmbPresets">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>90</y>
+       <width>201</width>
+       <height>61</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="ModernButton" name="btnSavePreset">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>220</y>
+       <width>120</width>
+       <height>46</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #f5a9b8, stop:1 #d473a0);
+    color: white;
+    border: none;
+    border-radius: 20px;  /* Чем больше — тем круглее*/
+    padding: 8px 20px;
+    min-width: 80px;
+    min-height: 30px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #f8b8c4, stop:1 #e080b0);
+}
+QPushButton:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #e090a5, stop:1 #c06090);
+}</string>
+     </property>
+     <property name="text">
+      <string>Добавить</string>
+     </property>
+    </widget>
+    <widget class="ModernButton" name="btnDeletePreset">
+     <property name="geometry">
+      <rect>
+       <x>260</x>
+       <y>220</y>
+       <width>120</width>
+       <height>46</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+    background-color: #2d2d2d;  /* Тёмно-серый, почти чёрный */
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 20px;
+    min-width: 80px;
+    min-height: 30px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background-color: #3d3d3d;
+}
+QPushButton:pressed {
+    background-color: #1d1d1d;
+}</string>
+     </property>
+     <property name="text">
+      <string>Удалить</string>
+     </property>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_3">
+     <property name="geometry">
+      <rect>
+       <x>100</x>
+       <y>50</y>
+       <width>261</width>
+       <height>121</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Source Code Pro Medium</family>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+    color: #FFF5EE; /* SeaShell - чуть теплее, кремовый */
+}</string>
+     </property>
+     <property name="title">
+      <string>Выбранный прессет:</string>
+     </property>
+    </widget>
+    <zorder>listView_9</zorder>
+    <zorder>label_18</zorder>
+    <zorder>btnSavePreset</zorder>
+    <zorder>btnDeletePreset</zorder>
+    <zorder>groupBox_3</zorder>
+    <zorder>cmbPresets</zorder>
+   </widget>
+   <widget class="QPushButton" name="btnExitGP">
+    <property name="geometry">
+     <rect>
+      <x>569</x>
+      <y>35</y>
+      <width>28</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 0px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+</string>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="icon">
+     <iconset resource="resursi.qrc">
+      <normaloff>:/izobr/Close.png</normaloff>:/izobr/Close.png</iconset>
+    </property>
+    <property name="iconSize">
+     <size>
+      <width>25</width>
+      <height>35</height>
+     </size>
+    </property>
+   </widget>
+   <widget class="QProgressBar" name="installProgress">
+    <property name="geometry">
+     <rect>
+      <x>157</x>
+      <y>367</y>
+      <width>311</width>
+      <height>8</height>
+     </rect>
+    </property>
+    <property name="value">
+     <number>24</number>
+    </property>
+    <property name="textVisible">
+     <bool>false</bool>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnAutorskiPrava">
+    <property name="geometry">
+     <rect>
+      <x>3</x>
+      <y>365</y>
+      <width>130</width>
+      <height>8</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Arial</family>
+      <pointsize>7</pointsize>
+     </font>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">QPushButton {
+	color: #9fa0a1;
+    background-color: transparent; /* Полностью прозрачный фон */
+    border: none;                 /* Убираем рамку */
+}
+QPushButton:hover {
+    background-color: rgba(255, 255, 255, 20); /* Легкий отсвет при наведении (по желанию) */
+}</string>
+    </property>
+    <property name="text">
+     <string>ReplaceX 0.9.6 © 2026 Dmitry </string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnAddRedux">
+    <property name="geometry">
+     <rect>
+      <x>480</x>
+      <y>93</y>
+      <width>41</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="icon">
+     <iconset theme="QIcon::ThemeIcon::FolderOpen"/>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnAutoCopyUpdate">
+    <property name="geometry">
+     <rect>
+      <x>430</x>
+      <y>171</y>
+      <width>41</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Sitka</family>
+      <pointsize>9</pointsize>
+     </font>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">QPushButton:hover {
+    background-color: #e9775b; /* Легкий отсвет при наведении (по желанию) */
+}
+</string>
+    </property>
+    <property name="text">
+     <string>Auto</string>
+    </property>
+   </widget>
+   <zorder>grbRedux</zorder>
+   <zorder>grbPapka</zorder>
+   <zorder>grbOrig</zorder>
+   <zorder>btnAutoCopyUpdate</zorder>
+   <zorder>btnAddRedux</zorder>
+   <zorder>btnReplaceOrig</zorder>
    <zorder>miniProgress</zorder>
    <zorder>marqueeLabel</zorder>
    <zorder>leditRedux</zorder>
@@ -2388,30 +3207,28 @@ QPushButton:hover {
    <zorder>leditOrig</zorder>
    <zorder>lblOnline</zorder>
    <zorder>lblAuto</zorder>
-   <zorder>label_2</zorder>
-   <zorder>grbRedux</zorder>
-   <zorder>grbPapka</zorder>
-   <zorder>grbOrig</zorder>
    <zorder>checkAutoLoad</zorder>
    <zorder>btnTelegram</zorder>
    <zorder>btnSettings</zorder>
    <zorder>btnReplaceRedux</zorder>
-   <zorder>btnReplaceOrig</zorder>
    <zorder>btnNotification</zorder>
-   <zorder>btnAddRedux</zorder>
+   <zorder>btnArxivRedux</zorder>
    <zorder>btnDonat</zorder>
-   <zorder>oknoNF</zorder>
    <zorder>lblLogotip</zorder>
    <zorder>btnOknoDop</zorder>
+   <zorder>oknoGta5V</zorder>
+   <zorder>btnExitNF</zorder>
+   <zorder>oknoNF</zorder>
+   <zorder>oknoPresets</zorder>
+   <zorder>oknoHDD</zorder>
+   <zorder>btnExitGP</zorder>
+   <zorder>installProgress</zorder>
    <zorder>oknoKnopohki</zorder>
    <zorder>oknoDiscleamer</zorder>
-   <zorder>oknoZV</zorder>
+   <zorder>btnAutorskiPrava</zorder>
    <zorder>oknoGP</zorder>
-   <zorder>oknoHDD</zorder>
-   <zorder>oknoGta5V</zorder>
+   <zorder>oknoZV</zorder>
    <zorder>oknoSettings</zorder>
-   <zorder>btnExitGP</zorder>
-   <zorder>btnExitNF</zorder>
   </widget>
  </widget>
  <customwidgets>
@@ -2427,6 +3244,7 @@ QPushButton:hover {
   </customwidget>
  </customwidgets>
  <resources>
+  <include location="resursi.qrc"/>
   <include location="resursi.qrc"/>
  </resources>
  <connections/>

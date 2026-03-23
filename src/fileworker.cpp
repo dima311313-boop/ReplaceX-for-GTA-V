@@ -1,249 +1,165 @@
 #include "fileworker.h"
 #include <QDebug>
+#include <QProcess>
+#include <QCoreApplication>
+#include <QDirIterator>
 
+// Системное копирование (Файл или Папка) через WinAPI
+bool FileWorker::winCopyPath(const QString &src, const QString &dst) {
+    if (src.isEmpty() || !QFile::exists(src) && !QDir(src).exists()) return false;
+
+    std::wstring wsrc = QDir::toNativeSeparators(src).toStdWString();
+    wsrc.push_back(L'\0'); wsrc.push_back(L'\0');
+    std::wstring wdst = QDir::toNativeSeparators(dst).toStdWString();
+    wdst.push_back(L'\0'); wdst.push_back(L'\0');
+
+    SHFILEOPSTRUCTW fileOp = {0};
+    fileOp.wFunc = FO_COPY;
+    fileOp.pFrom = wsrc.c_str();
+    fileOp.pTo = wdst.c_str();
+    fileOp.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_SILENT | FOF_NOERRORUI;
+
+    return SHFileOperationW(&fileOp) == 0;
+}
+
+// Системное удаление через WinAPI
+bool FileWorker::winRemovePath(const QString &path) {
+    if (path.isEmpty() || !QFile::exists(path) && !QDir(path).exists()) return true;
+
+    std::wstring wpath = QDir::toNativeSeparators(path).toStdWString();
+    wpath.push_back(L'\0'); wpath.push_back(L'\0');
+
+    SHFILEOPSTRUCTW fileOp = {0};
+    fileOp.wFunc = FO_DELETE;
+    fileOp.pFrom = wpath.c_str();
+    fileOp.fFlags = FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI;
+
+    return SHFileOperationW(&fileOp) == 0;
+}
 
 void FileWorker::processInstallation(FileWorker::Config config) {
     emit statusUpdate("Установка модов...");
-    QStringList failedComponents;
+    emit progressValue(0);
 
+    int total = (config.useRedux ? 1 : 0) + (config.useGunPack ? 1 : 0) + (config.useSounds ? 1 : 0);
+    if (total == 0) { emit operationFinished(true, "Задачи не выбраны"); return; }
+
+    int current = 0;
+
+    // 1. REDUX
     if (config.useRedux && !config.reduxPath.isEmpty()) {
         emit progressMessage("Установка Redux...");
-        if (!smartReplace(config.reduxPath, config.gameUpdatePath, "update.rpf")) {
-            failedComponents << "Redux (update.rpf)";
-        }
+        smartReplace(config.reduxPath, config.gameUpdatePath, "update.rpf");
+        current++; emit progressValue((current * 100) / total);
     }
 
+    // 2. GUNPACKS
     if (config.useGunPack && !config.gunPackSource.isEmpty()) {
         emit progressMessage("Установка GunPacks...");
-        if (!installGunPacks(config.gunPackSource, config.dlcPacksTarget, config.backupPath)) {
-            failedComponents << "GunPacks";
-        }
+        installGunPacks(config.gunPackSource, config.dlcPacksTarget, config.backupPath);
+        current++; emit progressValue((current * 100) / total);
     }
 
+    // 3. SOUNDS
     if (config.useSounds && !config.soundModPath.isEmpty()) {
         emit progressMessage("Установка звуков...");
-        if (!internalReplaceSounds(config.soundModPath, config.sfxPath, config.soundBackupPath)) {
-            failedComponents << "Звуковые моды";
-        }
+        internalReplaceSounds(config.soundModPath, config.sfxPath, config.soundBackupPath);
+        current++; emit progressValue((current * 100) / total);
     }
 
-    if (failedComponents.isEmpty()) {
-        emit operationFinished(true, "Все моды успешно установлены");
-    } else {
-        QString errorMsg = "Ошибка при установке: " + failedComponents.join(", ");
-        emit operationFinished(false, errorMsg);
-    }
+    emit operationFinished(true, "Установка завершена");
 }
 
 void FileWorker::processRestoration(FileWorker::Config config) {
-    emit statusUpdate("Возврат оригиналов...");
+    emit statusUpdate("Восстановление...");
     killGtaEcosystem();
-    QThread::msleep(2000); // Даем время процессам завершиться
+    QThread::msleep(1000);
 
-    QStringList failedSteps;
-
-    emit progressMessage("Восстановление update.rpf...");
-    if (!smartReplace(config.originalPath, config.gameUpdatePath, "update.rpf")) {
-        failedSteps << "update.rpf";
+    // Восстанавливаем только то, что было включено в конфиге!
+    if (config.useRedux && !config.originalPath.isEmpty()) {
+        emit progressMessage("Возврат update.rpf...");
+        smartReplace(config.originalPath, config.gameUpdatePath, "update.rpf");
     }
 
-    emit progressMessage("Восстановление GunPacks...");
-    if (!restoreGunPacks(config.dlcPacksTarget, config.backupPath)) {
-        failedSteps << "GunPacks";
+    if (config.useGunPack) {
+        emit progressMessage("Возврат GunPacks...");
+        restoreGunPacks(config.dlcPacksTarget, config.backupPath);
     }
 
-    emit progressMessage("Восстановление звуков...");
-    if (!internalRestoreSounds(config.sfxPath, config.soundBackupPath)) {
-        failedSteps << "Звуковые архивы";
+    if (config.useSounds) {
+        emit progressMessage("Возврат звуков...");
+        internalRestoreSounds(config.sfxPath, config.soundBackupPath);
     }
 
-    if (failedSteps.isEmpty()) {
-        emit operationFinished(true, "Оригиналы успешно возвращены");
-    } else {
-        QString errorDetail = "Не удалось восстановить: " + failedSteps.join(", ");
-        emit operationFinished(false, errorDetail);
-    }
-}
-
-// --- РЕАЛИЗАЦИЯ РУЧНЫХ СЛОТОВ ---
-
-void FileWorker::manualSmartReplace(const QString &source, const QString &targetDir, const QString &targetFileName) {
-    emit statusUpdate("Ручная замена файла...");
-    bool ok = smartReplace(source, targetDir, targetFileName);
-    emit operationFinished(ok, ok ? "Файл успешно заменен" : "Ошибка при замене файла");
-}
-
-void FileWorker::manualRestoreGunPacks(FileWorker::Config config) {
-    emit statusUpdate("Ручное восстановление GunPacks...");
-    bool ok = restoreGunPacks(config.dlcPacksTarget, config.backupPath);
-    emit operationFinished(ok, ok ? "GunPacks восстановлены" : "Ошибка восстановления GunPacks");
-}
-
-void FileWorker::manualInstallGunPacks(FileWorker::Config config) {
-    emit statusUpdate("Ручная установка GunPacks...");
-    bool ok = installGunPacks(config.gunPackSource, config.dlcPacksTarget, config.backupPath);
-    emit operationFinished(ok, ok ? "GunPacks установлены" : "Ошибка установки GunPacks");
-}
-
-void FileWorker::manualReplaceSounds(FileWorker::Config config) {
-    emit statusUpdate("Ручная установка звуков...");
-    bool ok = internalReplaceSounds(config.soundModPath, config.sfxPath, config.soundBackupPath);
-    emit operationFinished(ok, ok ? "Звуки установлены" : "Ошибка при установке звуков");
-}
-
-void FileWorker::manualRestoreSounds(FileWorker::Config config) {
-    emit statusUpdate("Ручное восстановление звуков...");
-    bool ok = internalRestoreSounds(config.sfxPath, config.soundBackupPath);
-    emit operationFinished(ok, ok ? "Звуки восстановлены" : "Ошибка при восстановлении звуков");
-}
-
-// --- ВНУТРЕННЯЯ ЛОГИКА (WinAPI) ---
-
-bool FileWorker::smartReplace(const QString &source, const QString &targetDir, const QString &targetFileName) {
-    if (source.isEmpty() || !QFile::exists(source)) return false;
-
-    QFileInfo srcInfo(source);
-    qint64 srcSize = srcInfo.size();
-
-    // ПРОВЕРКА 1: Если источник 0 КБ — это ошибка, не копируем
-    if (srcSize <= 0) {
-        qCritical() << "ОШИБКА: Исходный файл пуст (0 КБ):" << source;
-        return false;
-    }
-
-    QString fullDestPath = QDir::toNativeSeparators(targetDir + "/" + targetFileName);
-    QString nativeSource = QDir::toNativeSeparators(source);
-
-    if (nativeSource.toLower() == fullDestPath.toLower()) return true;
-
-    // Пытаемся 20 раз с короткой паузой (100мс)
-    for (int i = 0; i < 20; ++i) {
-        if (QFile::exists(fullDestPath)) {
-            SetFileAttributesW((LPCWSTR)fullDestPath.utf16(), FILE_ATTRIBUTE_NORMAL);
-        }
-
-        // Копируем СРАЗУ поверх (FALSE позволяет перезаписывать)
-        if (CopyFileW((LPCWSTR)nativeSource.utf16(), (LPCWSTR)fullDestPath.utf16(), FALSE)) {
-            // ПРОВЕРКА 2: После копирования проверяем размер целевого файла
-            QFileInfo destInfo(fullDestPath);
-            if (destInfo.exists() && destInfo.size() == srcSize) {
-                return true;
-            } else {
-                qWarning() << "Попытка" << i+1 << ": Файл скопирован неверно (размер не совпадает). Пробуем снова...";
-            }
-        }
-
-        QThread::msleep(100);
-    }
-    return false;
-}
-
-bool FileWorker::copyDirectory(const QString &sourceDir, const QString &targetDir) {
-    QDir sourceDirectory(sourceDir);
-    if (!QDir().mkpath(targetDir)) return false;
-
-    QFileInfoList fileList = sourceDirectory.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
-    foreach (const QFileInfo &fileInfo, fileList) {
-        QString srcPath = QDir::toNativeSeparators(fileInfo.absoluteFilePath());
-        QString dstPath = QDir::toNativeSeparators(targetDir + "/" + fileInfo.fileName());
-
-        if (fileInfo.isDir()) {
-            if (!copyDirectory(srcPath, dstPath)) return false;
-        } else {
-            if (QFile::exists(dstPath)) {
-                SetFileAttributesW((LPCWSTR)dstPath.utf16(), FILE_ATTRIBUTE_NORMAL);
-            }
-            if (!CopyFileW((LPCWSTR)srcPath.utf16(), (LPCWSTR)dstPath.utf16(), FALSE)) return false;
-        }
-    }
-    return true;
+    emit operationFinished(true, "Оригиналы возвращены");
 }
 
 bool FileWorker::installGunPacks(const QString &source, const QString &target, const QString &backup) {
-    QDir sourceDir(source);
-    QDir targetDir(target);
+    QDir srcDir(source);
+    QFileInfoList items = srcDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
     QDir().mkpath(backup);
-    QFileInfoList items = sourceDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
-    foreach (const QFileInfo &item, items) {
-        QString targetItem = QDir::toNativeSeparators(targetDir.absoluteFilePath(item.fileName()));
-        QString backupItem = QDir::toNativeSeparators(backup + "/" + item.fileName());
 
-        // УМНЫЙ БЭКАП: Только если его еще нет
-        if (!QFile::exists(backupItem) && !QDir(backupItem).exists()) {
-            if (QFile::exists(targetItem) || QDir(targetItem).exists()) {
-                if (item.isDir()) copyDirectory(targetItem, backupItem);
-                else CopyFileW((LPCWSTR)targetItem.utf16(), (LPCWSTR)backupItem.utf16(), FALSE);
+    foreach (const QFileInfo &item, items) {
+        QString targetPath = QDir::toNativeSeparators(target + "/" + item.fileName());
+        QString backupPath = QDir::toNativeSeparators(backup + "/" + item.fileName());
+
+        // БЭКАП С ПРОВЕРКОЙ
+        if (!QFile::exists(backupPath) && !QDir(backupPath).exists()) {
+            if (QFile::exists(targetPath) || QDir(targetPath).exists()) {
+                if (!winCopyPath(targetPath, backupPath)) {
+                    qCritical() << "Ошибка бэкапа:" << item.fileName();
+                    return false;
+                }
             }
         }
 
-        if (item.isDir()) {
-            QDir(targetItem).removeRecursively();
-            if (!copyDirectory(item.absoluteFilePath(), targetItem)) return false;
-        } else {
-            if (!smartReplace(item.absoluteFilePath(), target, item.fileName())) return false;
-        }
+        // ЗАМЕНА
+        winRemovePath(targetPath);
+        winCopyPath(item.absoluteFilePath(), targetPath);
     }
     return true;
 }
 
 bool FileWorker::restoreGunPacks(const QString &target, const QString &backup) {
-    QDir backupDir(backup);
-    if (!backupDir.exists()) return true;
-    QFileInfoList items = backupDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
+    QDir bkpDir(backup);
+    QFileInfoList items = bkpDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
     foreach (const QFileInfo &item, items) {
         QString targetPath = QDir::toNativeSeparators(target + "/" + item.fileName());
-
-        // Удаляем модовое
-        if (item.isDir()) QDir(targetPath).removeRecursively();
-        else {
-            SetFileAttributesW((LPCWSTR)targetPath.utf16(), FILE_ATTRIBUTE_NORMAL);
-            DeleteFileW((LPCWSTR)targetPath.utf16());
+        winRemovePath(targetPath);
+        if (winCopyPath(item.absoluteFilePath(), targetPath)) {
+            winRemovePath(item.absoluteFilePath());
         }
-
-        // Возвращаем оригинал
-        if (item.isDir()) {
-            if (!copyDirectory(item.absoluteFilePath(), targetPath)) return false;
-        } else {
-            if (!CopyFileW((LPCWSTR)item.absoluteFilePath().utf16(), (LPCWSTR)targetPath.utf16(), FALSE)) return false;
-        }
-
-        // Очищаем бэкап
-        if (item.isDir()) QDir(item.absoluteFilePath()).removeRecursively();
-        else QFile::remove(item.absoluteFilePath());
     }
     return true;
+}
+
+bool FileWorker::smartReplace(const QString &source, const QString &targetDir, const QString &targetFileName) {
+    QString dst = QDir::toNativeSeparators(targetDir + "/" + targetFileName);
+    winRemovePath(dst);
+    return winCopyPath(source, dst);
 }
 
 bool FileWorker::internalReplaceSounds(const QString &modPath, const QString &sfxPath, const QString &backupPath) {
     QDir modDir(modPath);
     QStringList files = modDir.entryList(QStringList() << "*.rpf", QDir::Files);
     QDir().mkpath(backupPath);
-
     foreach (const QString &f, files) {
-        QString targetItem = QDir::toNativeSeparators(sfxPath + "/" + f);
-        QString backupItem = QDir::toNativeSeparators(backupPath + "/" + f);
-        QString modItem = QDir::toNativeSeparators(modPath + "/" + f);
-
-        // УМНЫЙ БЭКАП
-        if (!QFile::exists(backupItem)) {
-            if (QFile::exists(targetItem)) {
-                CopyFileW((LPCWSTR)targetItem.utf16(), (LPCWSTR)backupItem.utf16(), FALSE);
-            }
-        }
-
-        // БЫСТРАЯ ЗАМЕНА
-        if (!smartReplace(modItem, sfxPath, f)) return false;
+        QString t = sfxPath + "/" + f;
+        QString b = backupPath + "/" + f;
+        if (!QFile::exists(b) && QFile::exists(t)) winCopyPath(t, b);
+        winRemovePath(t);
+        winCopyPath(modPath + "/" + f, t);
     }
     return true;
 }
 
 bool FileWorker::internalRestoreSounds(const QString &sfxPath, const QString &backupPath) {
     QDir bkpDir(backupPath);
-    if (!bkpDir.exists()) return true;
     QFileInfoList files = bkpDir.entryInfoList(QStringList() << "*.rpf", QDir::Files);
     foreach (const QFileInfo &f, files) {
-        if (!smartReplace(f.absoluteFilePath(), sfxPath, f.fileName())) return false;
-        QFile::remove(f.absoluteFilePath());
+        QString t = sfxPath + "/" + f.fileName();
+        winRemovePath(t);
+        if (winCopyPath(f.absoluteFilePath(), t)) winRemovePath(f.absoluteFilePath());
     }
     return true;
 }
@@ -264,3 +180,125 @@ void FileWorker::killGtaEcosystem() {
         CloseHandle(hSnap);
     }
 }
+
+void FileWorker::processUnpack(int type, QString archivePath, QString originalUpdatePath) {
+    emit statusUpdate("В процессе.....");
+    emit progressValue(10);
+
+    QString appDir = QCoreApplication::applicationDirPath();
+    bool isRar = archivePath.endsWith(".rar", Qt::CaseInsensitive);
+    QString tool = isRar ? "UnRAR.exe" : "7za.exe";
+    QString toolPtr = QDir::toNativeSeparators(appDir + "/" + tool);
+    QString password = "majestic-mods.ru";
+
+    QString folderName = (type == 0) ? "unrarRedux" : (type == 1) ? "unrarGuns" : "unrarSounds";
+    QString destDir = QDir::toNativeSeparators(appDir + "/" + folderName);
+
+    QDir(destDir).removeRecursively();
+    QDir().mkpath(destDir);
+
+    QProcess proc;
+    QStringList args;
+
+    // Используем "x" для сохранения структуры папок
+    if (isRar) {
+        args << "x" << "-p" + password << "-y" << "-ai" << archivePath << "*.*" << destDir + "\\";
+    } else {
+        args << "x" << archivePath << "-o" + destDir << "-p" + password << "-y" << "-r";
+    }
+
+    proc.start(toolPtr, args);
+    if (!proc.waitForFinished(180000)) {
+        proc.kill();
+        emit unpackFinished(type, "Ошибка");
+        return;
+    }
+
+    emit progressValue(70);
+    emit statusUpdate("Очистка мусора...");
+
+    // --- ЛОГИКА ОРГАНИЗАЦИИ И ОЧИСТКИ ---
+    QStringList targets;
+    if (type == 0) targets << "update.rpf";
+    else if (type == 1) targets << "mpapartment" << "patchday18ng";
+    else if (type == 2) targets << "RESIDENT.rpf" << "WEAPONS_PLAYER.rpf";
+
+    // 1. Ищем наши цели во всех подпапках (решаем проблему матрешек)
+    QDirIterator it(destDir, QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+    struct FoundItem { QString name; QString oldPath; bool isDir; };
+    QList<FoundItem> found;
+
+    while (it.hasNext()) {
+        it.next();
+        foreach(QString t, targets) {
+            if (it.fileName().compare(t, Qt::CaseInsensitive) == 0) {
+                found << FoundItem{it.fileName(), it.filePath(), it.fileInfo().isDir()};
+            }
+        }
+    }
+
+    if (found.isEmpty()) {
+        emit unpackFinished(type, "Ошибка");
+        return;
+    }
+
+    // 2. Переносим всё нужное во временную папку
+    QString tempDir = appDir + "/temp_extract";
+    QDir().mkpath(tempDir);
+    foreach(auto item, found) {
+        QString newPath = tempDir + "/" + item.name;
+        if (item.isDir) {
+            // Переносим папку
+            QDir().rename(item.oldPath, newPath);
+
+            // --- ВОТ ОНА, ЗАЧИСТКА ВНУТРИ ПАПКИ ---
+            // Проходим по всем файлам внутри перенесенной папки (рекурсивно)
+            QDirIterator subIt(newPath, QDir::Files, QDirIterator::Subdirectories);
+            while (subIt.hasNext()) {
+                subIt.next();
+                // Если файл НЕ заканчивается на .rpf — удаляем его без жалости
+                if (!subIt.fileName().endsWith(".rpf", Qt::CaseInsensitive)) {
+                    QFile::remove(subIt.filePath());
+                }
+            }
+        } else {
+            // Если это одиночный файл (как update.rpf), просто переносим
+            QFile::rename(item.oldPath, newPath);
+        }
+    }
+
+    // 3. Сносим всё в unrar папке (там остался мусор и пустые папки)
+    QDir(destDir).removeRecursively();
+    QDir().mkpath(destDir);
+
+    // 4. Возвращаем нужное из темпа в чистую папку
+    QDir tDir(tempDir);
+    foreach(QString f, tDir.entryList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot)) {
+        QDir().rename(tempDir + "/" + f, destDir + "/" + f);
+    }
+    tDir.removeRecursively();
+
+    // Финальная проверка для Redux
+    if (type == 0) {
+        QFileInfo fi(destDir + "/update.rpf");
+        if (!fi.exists() || fi.size() == 0) {
+            emit unpackFinished(type, "Ошибка");
+            return;
+        }
+    }
+
+    emit progressValue(100);
+    QString finalPath = QDir::toNativeSeparators(destDir);
+    if (type == 0) finalPath += "\\update.rpf";
+
+    emit unpackFinished(type, finalPath);
+}
+
+
+
+// Реализация ручных слотов (просто вызывают внутренние методы)
+void FileWorker::manualSmartReplace(const QString &s, const QString &td, const QString &tf) { emit progressValue(50); bool ok = smartReplace(s, td, tf); emit progressValue(100); emit operationFinished(ok, ok?"Успех":"Ошибка"); }
+void FileWorker::manualRestoreGunPacks(FileWorker::Config c) { bool ok = restoreGunPacks(c.dlcPacksTarget, c.backupPath); emit operationFinished(ok, ok?"Успех":"Ошибка"); }
+void FileWorker::manualInstallGunPacks(FileWorker::Config c) { bool ok = installGunPacks(c.gunPackSource, c.dlcPacksTarget, c.backupPath); emit operationFinished(ok, ok?"Успех":"Ошибка"); }
+void FileWorker::manualReplaceSounds(FileWorker::Config c) { bool ok = internalReplaceSounds(c.soundModPath, c.sfxPath, c.soundBackupPath); emit operationFinished(ok, ok?"Успех":"Ошибка"); }
+void FileWorker::manualRestoreSounds(FileWorker::Config c) { bool ok = internalRestoreSounds(c.sfxPath, c.soundBackupPath); emit operationFinished(ok, ok?"Успех":"Ошибка"); }

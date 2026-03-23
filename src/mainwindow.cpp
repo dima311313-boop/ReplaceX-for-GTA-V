@@ -32,9 +32,50 @@
 #include <QGraphicsBlurEffect>
 #include <QScreen>
 #include <QSoundEffect>
+#include <QCoreApplication>
+#include <QInputDialog>
+#include <QCheckBox>
+#include <QVBoxLayout>
+#include <QDialogButtonBox>
+#include <QParallelAnimationGroup>
+#include <QProgressBar>
+#include <QGraphicsDropShadowEffect>
+#include <QStandardPaths>
 
+QPixmap getPartiallyRoundedPixmap(const QPixmap& src, int radius, bool roundLeft) {
+    if (src.isNull()) return src;
 
+    QPixmap result(src.size());
+    result.fill(Qt::transparent);
 
+    QPainter painter(&result);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform);
+
+    QPainterPath path;
+    if (roundLeft) {
+        // Закругляем лево, право оставляем прямым
+        path.moveTo(src.width(), 0);
+        path.lineTo(radius, 0);
+        path.arcTo(0, 0, radius * 2, radius * 2, 90, 90);
+        path.lineTo(0, src.height() - radius);
+        path.arcTo(0, src.height() - radius * 2, radius * 2, radius * 2, 180, 90);
+        path.lineTo(src.width(), src.height());
+    } else {
+        // Закругляем право, лево оставляем прямым
+        path.moveTo(0, 0);
+        path.lineTo(src.width() - radius, 0);
+        path.arcTo(src.width() - radius * 2, 0, radius * 2, radius * 2, 90, -90);
+        path.lineTo(src.width(), src.height() - radius);
+        path.arcTo(src.width() - radius * 2, src.height() - radius * 2, radius * 2, radius * 2, 0, -90);
+        path.lineTo(0, src.height());
+    }
+    path.closeSubpath();
+
+    painter.setClipPath(path);
+    painter.drawPixmap(0, 0, src);
+    return result;
+}
 
 QPixmap getRoundedPixmap(const QPixmap& src, int radius) {
     if (src.isNull()) return src;
@@ -63,6 +104,14 @@ QPixmap getRoundedPixmap(const QPixmap& src, int radius) {
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
 
+    // Проверяем, есть ли мы в реестре
+    QSettings settingsA("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat);
+    if (settingsA.contains("ReplaceX")) {
+        ui->chkAutoZagruzkaWin->setChecked(true);
+    } else {
+        ui->chkAutoZagruzkaWin->setChecked(false);
+    }
+
     QString razdel = "-----------------------------------------------------------------";
 
     QString banner = R"(
@@ -86,6 +135,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     // Соединяем сигналы MainWindow с методами FileWorker
     connect(this, &MainWindow::requestInstall, m_worker, &FileWorker::processInstallation);
     connect(this, &MainWindow::requestRestore, m_worker, &FileWorker::processRestoration);
+    // В конструктор MainWindow:
+    connect(this, &MainWindow::requestUnpack, m_worker, &FileWorker::processUnpack);
+    connect(m_worker, &FileWorker::unpackFinished, this, &MainWindow::onUnpackResult);
+
 
     // Коннекты для РУЧНЫХ операций
     connect(this, &MainWindow::requestManualSmartReplace, m_worker, &FileWorker::manualSmartReplace);
@@ -95,6 +148,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(this, &MainWindow::requestManualRestoreSounds, m_worker, &FileWorker::manualRestoreSounds);
 
     // Соединяем ответы FileWorker с интерфейсом
+    connect(m_worker, &FileWorker::progressValue, ui->installProgress, &QProgressBar::setValue);
     connect(m_worker, &FileWorker::statusUpdate, this, &MainWindow::onWorkerStatus);
     connect(m_worker, &FileWorker::progressMessage, this, &MainWindow::onWorkerProgress);
     connect(m_worker, &FileWorker::operationFinished, this, &MainWindow::onWorkerFinished);
@@ -115,13 +169,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     manager->get(request);
 
 
-
     loadSettings();
 
     checkTimer = new QTimer(this);
     connect(checkTimer, &QTimer::timeout, this, &MainWindow::checkGtaProcess);
     checkTimer->start(3000); // Проверять раз в 3 секунды
 
+    ui->installProgress->setVisible(false);
+    ui->lineV->setVisible(false);
+    ui->oknoPresets->setVisible(false);
     ui->oknoGta5V->setVisible(false);
     ui->btnExitNF->setVisible(false);
     ui->oknoSettings->setVisible(false);
@@ -132,21 +188,25 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->oknoKnopohki->setVisible(false);
     ui->btnExitGP->setVisible(false);
     ui->oknoZV->setVisible(false);
+
+    // пульсация
+    QGraphicsOpacityEffect *onlineEff = new QGraphicsOpacityEffect(ui->lblOnline);
+    ui->lblOnline->setGraphicsEffect(onlineEff);
+
+    QPropertyAnimation *pulse = new QPropertyAnimation(onlineEff, "opacity");
+    pulse->setDuration(2000);     // Сделаем чуть медленнее (2 секунды)
+    pulse->setStartValue(1.0);
+    pulse->setEndValue(0.75);     // Затухание всего на 25% (будет очень мягко)
+    pulse->setEasingCurve(QEasingCurve::InOutQuad); // Более плавная кривая
+    pulse->setLoopCount(-1);
+    pulse->start();
+
     //получение пути
     connect(ui->leditPapka, &QLineEdit::textChanged, [this](const QString &text) {
         QSettings settings("MyCompany", "MyGameTool");
         settings.setValue("Paths/GameFolder", text);
-    });
+    });    
 
-
-    //оконо установки ган паков (фон)
-    ui->listView->setStyleSheet(
-        "QListView {"
-        "   background-color: #1e1e1e;"
-        "   border: 2px solid #cccccc;" //цвет
-        "   border-radius: 4px;" //углы
-        "}"
-        );
     //бэкапы ган паков
     m_backupPath = QCoreApplication::applicationDirPath() + "/backups_gta";
 
@@ -172,6 +232,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     ui->btnTelegram->installEventFilter(this);
     ui->btnDonat->installEventFilter(this);
+    ui->btnArxivRedux->installEventFilter(this);
+    ui->btnArxivGuns->installEventFilter(this);
+    ui->btnArxivSounds->installEventFilter(this);
     //end knopocki
 
 
@@ -181,35 +244,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->miniProgress->setText("Ожидание запуска игры");
     this->setWindowIcon(QIcon(":/izobr/IconG.ico"));
     this->setWindowTitle("ReplaceX");
-    //закругление tg
-    ui->btnTelegram->setStyleSheet(
-        "QPushButton#btnTelegram {"
-        " border-radius: 25px;"
-        " background-color: #0088cc;"
-        " border: none;"
-        " background-image: url(:/izobr/telegram_icon.png);"
-        " background-position: center;"
-        " background-repeat: no-repeat;"
-        " padding: 0px;"
-        "}"
-        "QPushButton#btnTelegram:hover {"
-        " background-color: #00aaff;"
-        "}"
-        );
-    ui->btnDonat->setStyleSheet(
-        "QPushButton#btnDonat {"
-        " border-radius: 25px;"
-        " background-color: #0088cc;"
-        " border: none;"
-        " background-image: url(:/izobr/1647901232_1-abrakadabra-fun-p-donati-alers-1.jpg);"
-        " background-position: center;"
-        " background-repeat: no-repeat;"
-        " padding: 0px;"
-        "}"
-        "QPushButton#btnDonat:hover {"
-        " background-color: #00aaff;"
-        "}"
-        );
 
 
 
@@ -402,6 +436,20 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
         ui->btnReplaceOrig->setImagePath(":/izobr/Orig01.png");
     }
+
+    updatePresetsCombo();
+
+    // АВТО-ЗАГРУЗКА ПОСЛЕДНЕГО ПРЕСЕТА
+    QSettings s("MyCompany", "MyGameTool");
+    QString lastPreset = s.value("LastPresetName").toString();
+    if (!lastPreset.isEmpty()) {
+        int idx = ui->cmbPresets->findText(lastPreset);
+        if (idx > 0) { // Проверяем, что это не "Выберите пресет..." (индекс 0)
+            ui->cmbPresets->setCurrentIndex(idx);
+            on_cmbPresets_activated(idx); // Вызываем загрузку
+            qInfo() << "Автоматически загружен последний пресет:" << lastPreset;
+        }
+    }
 }
 
 MainWindow::~MainWindow() {
@@ -423,7 +471,147 @@ MainWindow::~MainWindow() {
 
     delete ui;
 }
+void MainWindow::applyModernShadow(QWidget* widget) {
+    if (!widget) return;
 
+    QGraphicsDropShadowEffect* shadow = new QGraphicsDropShadowEffect(widget);
+    shadow->setBlurRadius(30);      // Насколько мягкая тень
+    shadow->setXOffset(0);         // Смещение по горизонтали
+    shadow->setYOffset(0);         // Смещение по вертикали (0 для эффекта свечения)
+    shadow->setColor(QColor(0, 0, 0, 200)); // Черная тень с прозрачностью
+    widget->setGraphicsEffect(shadow);
+}
+
+void MainWindow::animateWindowOpen(QWidget* target, QWidget* sourceBtn) {
+    // 1. Список всех «всплывающих» окон
+    QList<QWidget*> subWindows = {ui->oknoPresets, ui->oknoHDD, ui->oknoSettings,
+                                   ui->oknoZV, ui->oknoGP, ui->oknoDiscleamer};
+
+    // Скрываем все окна из списка, кроме того, которое открываем
+    for(QWidget* w : subWindows) {
+        if(w != target) w->hide();
+    }
+
+    // 2. ЛОГИКА ДЛЯ oknoKnopohki: скрываем только если идем в Настройки
+    if (target == ui->oknoSettings) {
+        ui->oknoKnopohki->hide();
+    } else {
+        ui->oknoKnopohki->show();
+        ui->oknoKnopohki->raise(); // Держим панель кнопок сверху
+    }
+
+    // 3. Создаем «Снимок» (Snapshot)
+    target->setGraphicsEffect(nullptr);
+
+    target->setAttribute(Qt::WA_DontShowOnScreen);
+    target->show();
+    QPixmap snapshot(target->size());
+    snapshot.fill(Qt::transparent);
+    target->render(&snapshot);
+    target->hide();
+    target->setAttribute(Qt::WA_DontShowOnScreen, false);
+
+    // 4. Слой анимации
+    QLabel* animLayer = new QLabel(this);
+    animLayer->setPixmap(snapshot);
+    animLayer->setScaledContents(true);
+    animLayer->setGeometry(sourceBtn->geometry());
+
+    QGraphicsOpacityEffect* opacity = new QGraphicsOpacityEffect(animLayer);
+    animLayer->setGraphicsEffect(opacity);
+    animLayer->show();
+    animLayer->raise();
+
+    // 5. Групповая анимация
+    QParallelAnimationGroup* group = new QParallelAnimationGroup(this);
+
+    QPropertyAnimation* geoAnim = new QPropertyAnimation(animLayer, "geometry");
+    geoAnim->setDuration(400);
+    geoAnim->setStartValue(sourceBtn->geometry());
+    geoAnim->setEndValue(target->geometry());
+    geoAnim->setEasingCurve(QEasingCurve::OutBack);
+
+    QPropertyAnimation* opaAnim = new QPropertyAnimation(opacity, "opacity");
+    opaAnim->setDuration(300);
+    opaAnim->setStartValue(0.0);
+    opaAnim->setEndValue(1.0);
+
+    group->addAnimation(geoAnim);
+    group->addAnimation(opaAnim);
+
+    // 6. Финал
+    connect(group, &QParallelAnimationGroup::finished, this, [=]() {
+        target->show();
+        target->raise();
+
+        // ПРИМЕНЯЕМ ТЕНЬ К РЕАЛЬНОМУ ОКНУ, КОГДА ОНО ПОЯВИЛОСЬ
+        applyModernShadow(target);
+
+        ui->btnExitGP->show();
+        ui->btnExitGP->raise();
+
+        animLayer->deleteLater();
+        group->deleteLater();
+    });
+
+    group->start();
+}
+void MainWindow::animateFadeOut(QWidget* target) {
+    if (!target || !target->isVisible()) return;
+
+    // 1. Делаем снимок окна
+    QPixmap snapshot(target->size());
+    snapshot.fill(Qt::transparent);
+    target->render(&snapshot);
+
+    // Применяем закругление (чтобы края не дергались)
+    bool isLeftRounded = (target == ui->oknoSettings);
+    snapshot = getPartiallyRoundedPixmap(snapshot, 20, isLeftRounded);
+
+    // 2. Создаем слой анимации
+    QLabel* animLayer = new QLabel(this);
+    animLayer->setPixmap(snapshot);
+    animLayer->setScaledContents(true);
+    animLayer->setGeometry(target->geometry());
+
+    QGraphicsOpacityEffect* opacity = new QGraphicsOpacityEffect(animLayer);
+    animLayer->setGraphicsEffect(opacity);
+    animLayer->show();
+    animLayer->raise();
+
+    // Скрываем реальное окно мгновенно
+    target->hide();
+
+    // 3. Анимация затухания и легкого уменьшения
+    QParallelAnimationGroup* group = new QParallelAnimationGroup(this);
+
+    // Прозрачность в 0
+    QPropertyAnimation* opaAnim = new QPropertyAnimation(opacity, "opacity");
+    opaAnim->setDuration(300);
+    opaAnim->setStartValue(1.0);
+    opaAnim->setEndValue(0.0);
+    opaAnim->setEasingCurve(QEasingCurve::OutCubic);
+
+    // Легкое уменьшение размера (эффект ухода вдаль)
+    QPropertyAnimation* geoAnim = new QPropertyAnimation(animLayer, "geometry");
+    geoAnim->setDuration(300);
+    QRect startGeo = target->geometry();
+    // Окно уменьшится на 10 пикселей с каждой стороны
+    QRect endGeo = startGeo.adjusted(10, 10, -10, -10);
+    geoAnim->setStartValue(startGeo);
+    geoAnim->setEndValue(endGeo);
+    geoAnim->setEasingCurve(QEasingCurve::OutCubic);
+
+    group->addAnimation(opaAnim);
+    group->addAnimation(geoAnim);
+
+    connect(group, &QParallelAnimationGroup::finished, [=]() {
+        animLayer->deleteLater();
+        group->deleteLater();
+    });
+
+    group->start();
+}
 void MainWindow::blurEf(bool enable)
 {
     static QWidget *overlay = nullptr;
@@ -478,7 +666,7 @@ void MainWindow::blurEf(bool enable)
 }
 
 // Твоя текущая версия программы
-const QString CURRENT_VERSION = "0.9.5";
+const QString CURRENT_VERSION = "0.9.6";
 
 void MainWindow::onResult(QNetworkReply *reply) {
     if (reply->error() != QNetworkReply::NoError) {
@@ -546,11 +734,11 @@ void MainWindow::onResult(QNetworkReply *reply) {
             {
                 qDebug() << "Удачных тестов!";
             }
-        else {
-            qDebug() << "Доступна новая версия: " << remoteVersion;
-            ui->lblUpVer->setText("Новая версия: " + remoteVersion);
-            ui->lblSpisocIzm->setText(changelogText);
-            ui->btnNotification->setVisible(true);
+            else {
+                qDebug() << "Доступна новая версия: " << remoteVersion;
+                ui->lblUpVer->setText("Новая версия: " + remoteVersion);
+                ui->lblSpisocIzm->setText(changelogText);
+                ui->btnNotification->setVisible(true);
             }
         }
         N = true;
@@ -710,21 +898,26 @@ bool MainWindow::isProcessRunning(const QString &exeName) {
 
 FileWorker::Config MainWindow::getCurrentConfig() {
     FileWorker::Config cfg;
+    // Очень важно: берем текст ПРЯМО из QLineEdit
     cfg.reduxPath = ui->leditRedux->text();
     cfg.originalPath = ui->leditOrig->text();
     cfg.gameUpdatePath = ui->leditPapka->text();
     cfg.gunPackSource = ui->leditGunPuck->text();
     cfg.dlcPacksTarget = ui->leditDLS->text();
-    cfg.backupPath = QCoreApplication::applicationDirPath() + "/backups_gta";
     cfg.soundModPath = ui->leditModZV->text();
     cfg.sfxPath = ui->leditPapcaZV->text();
+
+    // Папки бэкапов (лучше делать абсолютными)
+    cfg.backupPath = QCoreApplication::applicationDirPath() + "/backups_gta";
     cfg.soundBackupPath = QCoreApplication::applicationDirPath() + "/sound_backup";
+
+    // Галочки
     cfg.useRedux = ui->checkAutoLoad->isChecked();
     cfg.useGunPack = ui->checkAutoLoadGP->isChecked();
     cfg.useSounds = ui->checkAutoLoadZV->isChecked();
+
     return cfg;
 }
-
 
 
 
@@ -763,6 +956,7 @@ void MainWindow::checkProcessLoop() {
 
     // Фиксируем, что игра реально запустилась
     if (isGtaRunning) {
+        ui->installProgress->setVisible(true);
         m_gameStarted = true;
     }
 
@@ -801,6 +995,8 @@ void MainWindow::onWorkerProgress(QString msg) {
 
 void MainWindow::onWorkerFinished(bool success, QString details) {
     m_isOperationPending = false;
+    if (success) ui->installProgress->setValue(100);
+    else ui->installProgress->setValue(0);
 
     // Проверяем, включен ли звук в настройках (через чекбокс)
     bool soundEnabled = ui->checkSound->isChecked();
@@ -808,6 +1004,7 @@ void MainWindow::onWorkerFinished(bool success, QString details) {
     if (success) {
         if (soundEnabled && m_soundSuccess->isLoaded()) {
             m_soundSuccess->play();
+            ui->installProgress->setVisible(false);
         }
     } else {
         if (soundEnabled) {
@@ -1019,6 +1216,102 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return true;
         }
     }
+    if (obj == ui->btnArxivRedux) {
+        if (event->type() == QEvent::Enter) {
+            infoPopup->setFixedWidth(250);
+            infoPopup->setWordWrap(true);
+            infoPopup->adjustSize();
+            infoPopup->setText("Авто распаковка вашего архива с редуксом - программа сама найдет нужные файлы, извлечет и укажет пути к ним. Процесс обнаружения и извлечения занимает от 5-10 секунд. (На данный момент из поддержуемых запароленных архивов - только архивы от Majestic-mods.ru)");
+            infoPopup->adjustSize();
+
+            QPoint globalPos = ui->btnArxivRedux->mapToGlobal(QPoint(0, 0));
+            int x = globalPos.x() + (ui->btnArxivRedux->width() / 2) - (infoPopup->width() / 2);
+            int y = globalPos.y() - infoPopup->height() - 10;
+
+            infoPopup->move(x, y);
+            infoPopup->show();
+
+            QPropertyAnimation *anim = new QPropertyAnimation(popupOpacity, "opacity");
+            anim->setDuration(200);
+            anim->setStartValue(popupOpacity->opacity());
+            anim->setEndValue(1.0);
+            anim->start(QAbstractAnimation::DeleteWhenStopped);
+            return true;
+        }
+        else if (event->type() == QEvent::Leave) {
+            QPropertyAnimation *anim = new QPropertyAnimation(popupOpacity, "opacity");
+            anim->setDuration(200);
+            anim->setStartValue(popupOpacity->opacity());
+            anim->setEndValue(0.0);
+            connect(anim, &QPropertyAnimation::finished, infoPopup, &QLabel::hide);
+            anim->start(QAbstractAnimation::DeleteWhenStopped);
+            return true;
+        }
+    }
+    if (obj == ui->btnArxivGuns) {
+        if (event->type() == QEvent::Enter) {
+            infoPopup->setFixedWidth(250);
+            infoPopup->setWordWrap(true);
+            infoPopup->adjustSize();
+            infoPopup->setText("Авто распаковка вашего архива с ган паком - программа сама найдет нужные файлы, извлечет и укажет пути к ним. Процесс обнаружения и извлечения занимает от 5-10 секунд. (На данный момент из поддержуемых запароленных архивов - только архивы от Majestic-mods.ru)");
+            infoPopup->adjustSize();
+
+            QPoint globalPos = ui->btnArxivGuns->mapToGlobal(QPoint(0, 0));
+            int x = globalPos.x() + (ui->btnArxivGuns->width() / 2) - (infoPopup->width() / 2);
+            int y = globalPos.y() - infoPopup->height() - 10;
+
+            infoPopup->move(x, y);
+            infoPopup->show();
+
+            QPropertyAnimation *anim = new QPropertyAnimation(popupOpacity, "opacity");
+            anim->setDuration(200);
+            anim->setStartValue(popupOpacity->opacity());
+            anim->setEndValue(1.0);
+            anim->start(QAbstractAnimation::DeleteWhenStopped);
+            return true;
+        }
+        else if (event->type() == QEvent::Leave) {
+            QPropertyAnimation *anim = new QPropertyAnimation(popupOpacity, "opacity");
+            anim->setDuration(200);
+            anim->setStartValue(popupOpacity->opacity());
+            anim->setEndValue(0.0);
+            connect(anim, &QPropertyAnimation::finished, infoPopup, &QLabel::hide);
+            anim->start(QAbstractAnimation::DeleteWhenStopped);
+            return true;
+        }
+    }
+    if (obj == ui->btnArxivSounds) {
+        if (event->type() == QEvent::Enter) {
+            infoPopup->setFixedWidth(250);
+            infoPopup->setWordWrap(true);
+            infoPopup->adjustSize();
+            infoPopup->setText("Авто распаковка вашего архива с модифицированными звуками - программа сама найдет нужные файлы, извлечет и укажет пути к ним. Процесс обнаружения и извлечения занимает от 5-10секунд. (На данный момент из поддержуемых запароленных архивов - только архивы от Majestic-mods.ru)");
+            infoPopup->adjustSize();
+
+            QPoint globalPos = ui->btnArxivSounds->mapToGlobal(QPoint(0, 0));
+            int x = globalPos.x() + (ui->btnArxivSounds->width() / 2) - (infoPopup->width() / 2);
+            int y = globalPos.y() - infoPopup->height() - 10;
+
+            infoPopup->move(x, y);
+            infoPopup->show();
+
+            QPropertyAnimation *anim = new QPropertyAnimation(popupOpacity, "opacity");
+            anim->setDuration(200);
+            anim->setStartValue(popupOpacity->opacity());
+            anim->setEndValue(1.0);
+            anim->start(QAbstractAnimation::DeleteWhenStopped);
+            return true;
+        }
+        else if (event->type() == QEvent::Leave) {
+            QPropertyAnimation *anim = new QPropertyAnimation(popupOpacity, "opacity");
+            anim->setDuration(200);
+            anim->setStartValue(popupOpacity->opacity());
+            anim->setEndValue(0.0);
+            connect(anim, &QPropertyAnimation::finished, infoPopup, &QLabel::hide);
+            anim->start(QAbstractAnimation::DeleteWhenStopped);
+            return true;
+        }
+    }
     return QMainWindow::eventFilter(obj, event);
 }
 
@@ -1031,102 +1324,48 @@ void MainWindow::on_btnTelegram_clicked()
     QDesktopServices::openUrl(QUrl(telegramUrl));
 }
 //ган пак
-void MainWindow::on_btnOknoDop_clicked()
-{
-    ui->oknoGta5V->setVisible(false);
-    ui->oknoNF->setVisible(false);
-    ui->btnExitNF->setVisible(false);
-    if(oknoDop == true){
-        //дисклеймер
-        QRect startRect = ui->btnOknoDop->geometry();
-        QRect endRect = ui->oknoDiscleamer->geometry();
-
-        ui->oknoDiscleamer->setGeometry(startRect);
-        ui->oknoDiscleamer->setVisible(true);
-
-        QPropertyAnimation *anim = new QPropertyAnimation(ui->oknoDiscleamer, "geometry");
-        anim->setDuration(400);
-        anim->setStartValue(startRect);
-        anim->setEndValue(endRect);
-        anim->setEasingCurve(QEasingCurve::OutCubic);
-        anim->start(QPropertyAnimation::DeleteWhenStopped);
-
-
-        QGraphicsOpacityEffect *eff = new QGraphicsOpacityEffect(this);
-        ui->oknoDiscleamer->setGraphicsEffect(eff);
-        ui->oknoDiscleamer->setVisible(true);
-
-        QPropertyAnimation *a = new QPropertyAnimation(eff, "opacity");
-        a->setDuration(50); // длительность в мс
-        a->setStartValue(0);
-        a->setEndValue(1);
-        a->setEasingCurve(QEasingCurve::InBack); // тип сглаживания
-        a->start(QPropertyAnimation::DeleteWhenStopped);
-        //кнопочки
-        QRect startRectK = ui->btnOknoDop->geometry();
-        QRect endRectK = ui->oknoKnopohki->geometry();
-
-        ui->oknoKnopohki->setGeometry(startRect);
-        ui->oknoKnopohki->setVisible(true);
-
-        QPropertyAnimation *anim2 = new QPropertyAnimation(ui->oknoKnopohki, "geometry");
-        anim2->setDuration(400);
-        anim2->setStartValue(startRectK);
-        anim2->setEndValue(endRectK);
-        anim2->setEasingCurve(QEasingCurve::OutCubic);
-        anim2->start(QPropertyAnimation::DeleteWhenStopped);
-
-
-        QGraphicsOpacityEffect *eff2 = new QGraphicsOpacityEffect(this);
-        ui->oknoDiscleamer->setGraphicsEffect(eff2);
-        ui->oknoDiscleamer->setVisible(true);
-
-        QPropertyAnimation *b = new QPropertyAnimation(eff2, "opacity");
-        b->setDuration(50); // длительность в мс
-        b->setStartValue(0);
-        b->setEndValue(1);
-        b->setEasingCurve(QEasingCurve::InBack); // тип сглаживания
-        b->start(QPropertyAnimation::DeleteWhenStopped);
-
-        //кнопка выхода
-        QRect startRectE = ui->btnOknoDop->geometry();
-        QRect endRectE = ui->btnExitGP->geometry();
-
-        ui->btnExitGP->setGeometry(startRect);
-        ui->btnExitGP->setVisible(true);
-
-        QPropertyAnimation *anim3 = new QPropertyAnimation(ui->btnExitGP, "geometry");
-        anim3->setDuration(400);
-        anim3->setStartValue(startRectE);
-        anim3->setEndValue(endRectE);
-        anim3->setEasingCurve(QEasingCurve::OutCubic);
-        anim3->start(QPropertyAnimation::DeleteWhenStopped);
-
-
-        QGraphicsOpacityEffect *eff3 = new QGraphicsOpacityEffect(this);
-        ui->btnExitGP->setGraphicsEffect(eff3);
-        ui->btnExitGP->setVisible(true);
-
-        QPropertyAnimation *c = new QPropertyAnimation(eff3, "opacity");
-        c->setDuration(50); // длительность в мс
-        c->setStartValue(0);
-        c->setEndValue(1);
-        c->setEasingCurve(QEasingCurve::InBack); // тип сглаживания
-        c->start(QPropertyAnimation::DeleteWhenStopped);
-
+void MainWindow::on_btnOknoDop_clicked() {
+    if(oknoDop) {
+        ui->btnExitGP->setVisible(false);
+        animateWindowOpen(ui->oknoDiscleamer, ui->btnOknoDop);
+        ui->oknoKnopohki->show();
+        ui->oknoKnopohki->raise();
         oknoDop = false;
     }
 }
 void MainWindow::on_btnExitGP_clicked()
 {
     oknoDop = true;
-    ui->oknoSettings->setVisible(false);
-    ui->oknoGP->setVisible(false);
-    ui->oknoDiscleamer->setVisible(false);
-    ui->oknoKnopohki->setVisible(false);
-    ui->btnExitGP->setVisible(false);
-    ui->oknoZV->setVisible(false);
-    ui->oknoHDD->setVisible(false);
+    ui->lineV->setVisible(false);
+
+    // Список всех твоих окон
+    QList<QWidget*> windows = {ui->oknoPresets, ui->oknoSettings, ui->oknoGP,
+                                ui->oknoDiscleamer, ui->oknoZV, ui->oknoHDD};
+
+    // Запускаем анимацию для того окна, которое сейчас видно
+    for(QWidget* w : windows) {
+        if(w->isVisible()) {
+            animateFadeOut(w);
+        }
+    }
+
+    // Крестик и панель кнопок тоже плавно гасим (через обычную анимацию)
+    QGraphicsOpacityEffect* exEff = qobject_cast<QGraphicsOpacityEffect*>(ui->btnExitGP->graphicsEffect());
+    if(exEff) {
+        QPropertyAnimation* a = new QPropertyAnimation(exEff, "opacity");
+        a->setDuration(200);
+        a->setStartValue(1.0);
+        a->setEndValue(0.0);
+        connect(a, &QPropertyAnimation::finished, ui->btnExitGP, &QWidget::hide);
+        a->start(QAbstractAnimation::DeleteWhenStopped);
+    } else {
+        ui->btnExitGP->hide();
+    }
+
+    // Если нужно скрыть и панель кнопок (oknoKnopohki)
+    if(ui->oknoKnopohki->isVisible()) {
+        animateFadeOut(ui->oknoKnopohki);
+    }
 }
 void MainWindow::on_btnPapkaGP_clicked()
 {
@@ -1478,120 +1717,17 @@ QString MainWindow::autoFindUpdateFolder() {
     return "";
 }
 //окошко доп функций
-void MainWindow::on_btnGanpacOpen_clicked()
-{
-    //ган пак
-    QRect startRectGP = ui->btnGanpacOpen->geometry();
-    QRect endRectGP = ui->oknoGP->geometry();
-
-    ui->oknoGP->setGeometry(startRectGP);
-    ui->oknoGP->setVisible(true);
-
-    QPropertyAnimation *anim4 = new QPropertyAnimation(ui->oknoGP, "geometry");
-    anim4->setDuration(400);
-    anim4->setStartValue(startRectGP);
-    anim4->setEndValue(endRectGP);
-    anim4->setEasingCurve(QEasingCurve::OutCubic);
-    anim4->start(QPropertyAnimation::DeleteWhenStopped);
-
-
-    QGraphicsOpacityEffect *eff4 = new QGraphicsOpacityEffect(this);
-    ui->oknoGP->setGraphicsEffect(eff4);
-    ui->oknoGP->setVisible(true);
-
-    QPropertyAnimation *r = new QPropertyAnimation(eff4, "opacity");
-    r->setDuration(50); // длительность в мс
-    r->setStartValue(0);
-    r->setEndValue(1);
-    r->setEasingCurve(QEasingCurve::InBack); // тип сглаживания
-    r->start(QPropertyAnimation::DeleteWhenStopped);
-    //закрыть окно
-    QRect startRectE = ui->btnGanpacOpen->geometry();
-    QRect endRectE = ui->btnExitGP->geometry();
-
-    ui->btnExitGP->setGeometry(startRectE);
-    ui->btnExitGP->setVisible(true);
-
-    QPropertyAnimation *anim3 = new QPropertyAnimation(ui->btnExitGP, "geometry");
-    anim3->setDuration(400);
-    anim3->setStartValue(startRectE);
-    anim3->setEndValue(endRectE);
-    anim3->setEasingCurve(QEasingCurve::OutCubic);
-    anim3->start(QPropertyAnimation::DeleteWhenStopped);
-
-
-    QGraphicsOpacityEffect *eff3 = new QGraphicsOpacityEffect(this);
-    ui->btnExitGP->setGraphicsEffect(eff3);
-    ui->btnExitGP->setVisible(true);
-
-    QPropertyAnimation *c = new QPropertyAnimation(eff3, "opacity");
-    c->setDuration(50); // длительность в мс
-    c->setStartValue(0);
-    c->setEndValue(1);
-    c->setEasingCurve(QEasingCurve::InBack); // тип сглаживания
-    c->start(QPropertyAnimation::DeleteWhenStopped);
-
-    ui->oknoZV->setVisible(false);
-    ui->oknoDiscleamer->setVisible(false);
-    ui->oknoHDD->setVisible(false);
+void MainWindow::on_btnGanpacOpen_clicked() {
+    ui->btnExitGP->setVisible(false);
+    animateWindowOpen(ui->oknoGP, ui->btnGanpacOpen);
+    ui->lineV->move(1 , 25);
+    ui->lineV->setVisible(true);
 }
-void MainWindow::on_btnZVOpen_clicked()
-{
-    //звуки
-    QRect startRectZV = ui->btnZVOpen->geometry();
-    QRect endRectZV = ui->oknoZV->geometry();
-
-    ui->oknoZV->setGeometry(startRectZV);
-    ui->oknoZV->setVisible(true);
-
-    QPropertyAnimation *anim5 = new QPropertyAnimation(ui->oknoZV, "geometry");
-    anim5->setDuration(400);
-    anim5->setStartValue(startRectZV);
-    anim5->setEndValue(endRectZV);
-    anim5->setEasingCurve(QEasingCurve::OutCubic);
-    anim5->start(QPropertyAnimation::DeleteWhenStopped);
-
-
-    QGraphicsOpacityEffect *eff5 = new QGraphicsOpacityEffect(this);
-    ui->oknoZV->setGraphicsEffect(eff5);
-    ui->oknoZV->setVisible(true);
-
-    QPropertyAnimation *zv = new QPropertyAnimation(eff5, "opacity");
-    zv->setDuration(50); // длительность в мс
-    zv->setStartValue(0);
-    zv->setEndValue(1);
-    zv->setEasingCurve(QEasingCurve::InBack); // тип сглаживания
-    zv->start(QPropertyAnimation::DeleteWhenStopped);
-
-    //закрыть окно
-    QRect startRectE = ui->btnZVOpen->geometry();
-    QRect endRectE = ui->btnExitGP->geometry();
-
-    ui->btnExitGP->setGeometry(startRectE);
-    ui->btnExitGP->setVisible(true);
-
-    QPropertyAnimation *anim3 = new QPropertyAnimation(ui->btnExitGP, "geometry");
-    anim3->setDuration(400);
-    anim3->setStartValue(startRectE);
-    anim3->setEndValue(endRectE);
-    anim3->setEasingCurve(QEasingCurve::OutCubic);
-    anim3->start(QPropertyAnimation::DeleteWhenStopped);
-
-
-    QGraphicsOpacityEffect *eff3 = new QGraphicsOpacityEffect(this);
-    ui->btnExitGP->setGraphicsEffect(eff3);
-    ui->btnExitGP->setVisible(true);
-
-    QPropertyAnimation *c = new QPropertyAnimation(eff3, "opacity");
-    c->setDuration(50); // длительность в мс
-    c->setStartValue(0);
-    c->setEndValue(1);
-    c->setEasingCurve(QEasingCurve::InBack); // тип сглаживания
-    c->start(QPropertyAnimation::DeleteWhenStopped);
-
-    ui->oknoGP->setVisible(false);
-    ui->oknoDiscleamer->setVisible(false);
-    ui->oknoHDD->setVisible(false);
+void MainWindow::on_btnZVOpen_clicked() {
+    ui->btnExitGP->setVisible(false);
+    animateWindowOpen(ui->oknoZV, ui->btnZVOpen);
+    ui->lineV->move(1 , 85);
+    ui->lineV->setVisible(true);
 }
 
 //установка звуков оружия
@@ -1922,64 +2058,11 @@ bool MainWindow::restoreSounds() {
     return false;
 }
 //HDD
-void MainWindow::on_btnHDD_OpenDis_clicked()
-{
-    //hdd
-    QRect startRectHHD = ui->btnHDD_OpenDis->geometry();
-    QRect endRectHHD = ui->oknoHDD->geometry();
-
-    ui->oknoHDD->setGeometry(startRectHHD);
-    ui->oknoHDD->setVisible(true);
-
-    QPropertyAnimation *anim6 = new QPropertyAnimation(ui->oknoHDD, "geometry");
-    anim6->setDuration(400);
-    anim6->setStartValue(startRectHHD);
-    anim6->setEndValue(endRectHHD);
-    anim6->setEasingCurve(QEasingCurve::OutCubic);
-    anim6->start(QPropertyAnimation::DeleteWhenStopped);
-
-
-    QGraphicsOpacityEffect *eff6 = new QGraphicsOpacityEffect(this);
-    ui->oknoHDD->setGraphicsEffect(eff6);
-    ui->oknoHDD->setVisible(true);
-
-    QPropertyAnimation *hdd = new QPropertyAnimation(eff6, "opacity");
-    hdd->setDuration(50); // длительность в мс
-    hdd->setStartValue(0);
-    hdd->setEndValue(1);
-    hdd->setEasingCurve(QEasingCurve::InBack); // тип сглаживания
-    hdd->start(QPropertyAnimation::DeleteWhenStopped);
-
-    //кнопка выхода
-    QRect startRectE = ui->btnHDD_OpenDis->geometry();
-    QRect endRectE = ui->btnExitGP->geometry();
-
-    ui->btnExitGP->setGeometry(startRectE);
-    ui->btnExitGP->setVisible(true);
-
-    QPropertyAnimation *anim3 = new QPropertyAnimation(ui->btnExitGP, "geometry");
-    anim3->setDuration(400);
-    anim3->setStartValue(startRectE);
-    anim3->setEndValue(endRectE);
-    anim3->setEasingCurve(QEasingCurve::OutCubic);
-    anim3->start(QPropertyAnimation::DeleteWhenStopped);
-
-
-    QGraphicsOpacityEffect *eff3 = new QGraphicsOpacityEffect(this);
-    ui->btnExitGP->setGraphicsEffect(eff3);
-    ui->btnExitGP->setVisible(true);
-
-    QPropertyAnimation *c = new QPropertyAnimation(eff3, "opacity");
-    c->setDuration(50); // длительность в мс
-    c->setStartValue(0);
-    c->setEndValue(1);
-    c->setEasingCurve(QEasingCurve::InBack); // тип сглаживания
-    c->start(QPropertyAnimation::DeleteWhenStopped);
-
-    ui->oknoHDD->setVisible(true);
-    ui->oknoDiscleamer->setVisible(false);
-    ui->oknoGP->setVisible(false);
-    ui->oknoZV->setVisible(false);
+void MainWindow::on_btnHDD_OpenDis_clicked() {
+    ui->btnExitGP->setVisible(false);
+    animateWindowOpen(ui->oknoHDD, ui->btnHDD_OpenDis);
+    ui->lineV->move(1 , 145);
+    ui->lineV->setVisible(true);
 }
 void MainWindow::on_btnNext_clicked()
 {
@@ -2217,66 +2300,9 @@ void MainWindow::on_btnRage_clicked()
     QSettings settings("MyCompany", "MyGameTool");
     settings.setValue("SelectedPlatform", 2);
 }
-void MainWindow::on_btnSettings_clicked()
-{
-    ui->oknoSettings->setVisible(true);
-    ui->btnExitGP->setVisible(true);
-    //настройки
-    QRect startRectST = ui->btnSettings->geometry();
-    QRect endRectST = ui->oknoSettings->geometry();
-
-    ui->oknoSettings->setGeometry(startRectST);
-    ui->oknoSettings->setVisible(true);
-
-    QPropertyAnimation *anim22 = new QPropertyAnimation(ui->oknoSettings, "geometry");
-    anim22->setDuration(400);
-    anim22->setStartValue(startRectST);
-    anim22->setEndValue(endRectST);
-    anim22->setEasingCurve(QEasingCurve::OutCubic);
-    anim22->start(QPropertyAnimation::DeleteWhenStopped);
-
-
-    QGraphicsOpacityEffect *eff22 = new QGraphicsOpacityEffect(this);
-    ui->oknoSettings->setGraphicsEffect(eff22);
-    ui->oknoSettings->setVisible(true);
-
-    QPropertyAnimation *ns = new QPropertyAnimation(eff22, "opacity");
-    ns->setDuration(50); // длительность в мс
-    ns->setStartValue(0);
-    ns->setEndValue(1);
-    ns->setEasingCurve(QEasingCurve::InBack); // тип сглаживания
-    ns->start(QPropertyAnimation::DeleteWhenStopped);
-
-    //закрыть окно
-    QRect startRectE = ui->btnSettings->geometry();
-    QRect endRectE = ui->btnExitGP->geometry();
-
-    ui->btnExitGP->setGeometry(startRectE);
-    ui->btnExitGP->setVisible(true);
-
-    QPropertyAnimation *anim3 = new QPropertyAnimation(ui->btnExitGP, "geometry");
-    anim3->setDuration(400);
-    anim3->setStartValue(startRectE);
-    anim3->setEndValue(endRectE);
-    anim3->setEasingCurve(QEasingCurve::OutCubic);
-    anim3->start(QPropertyAnimation::DeleteWhenStopped);
-
-
-    QGraphicsOpacityEffect *eff3 = new QGraphicsOpacityEffect(this);
-    ui->btnExitGP->setGraphicsEffect(eff3);
-    ui->btnExitGP->setVisible(true);
-
-    QPropertyAnimation *c = new QPropertyAnimation(eff3, "opacity");
-    c->setDuration(50); // длительность в мс
-    c->setStartValue(0);
-    c->setEndValue(1);
-    c->setEasingCurve(QEasingCurve::InBack); // тип сглаживания
-    c->start(QPropertyAnimation::DeleteWhenStopped);
-
-    ui->oknoGP->setVisible(false);
-    ui->oknoDiscleamer->setVisible(false);
-    ui->oknoHDD->setVisible(false);
-    ui->oknoZV->setVisible(false);
+void MainWindow::on_btnSettings_clicked() {
+    ui->btnExitGP->setVisible(false);
+    animateWindowOpen(ui->oknoSettings, ui->btnSettings);
 }
 void MainWindow::on_cmbServer_currentIndexChanged(int index)
 {
@@ -2357,4 +2383,224 @@ void MainWindow::on_checkKnopki_toggled(bool checked)
 void MainWindow::on_btnGaid_clicked()
 {
     QDesktopServices::openUrl(QUrl("https://youtu.be/y7JQ1iXufUE?si=mqFOa9UK32hMu8UT"));
+}
+void MainWindow::on_chkAutoZagruzkaWin_stateChanged(int state)
+{
+    // Путь в реестре, где Windows ищет программы для автозапуска
+    QSettings settings("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat);
+
+    // Получаем полный путь к твоему .exe файлу
+    QString appPath = QDir::toNativeSeparators(QCoreApplication::applicationFilePath());
+
+    if (state == Qt::Checked) {
+        // Добавляем в автозагрузку.
+        // Добавляем флаг "--autostart", чтобы программа знала, что она запустилась сама
+        settings.setValue("ReplaceX", "\"" + appPath + "\" --autostart");
+    } else {
+        // Удаляем из автозагрузки
+        settings.remove("ReplaceX");
+    }
+}
+//прессеты
+// 1. Функция обновления списка пресетов в комбобоксе
+void MainWindow::updatePresetsCombo() {
+    ui->cmbPresets->clear();
+    ui->cmbPresets->addItem("Выберите пресет...");
+
+    QSettings s("MyCompany", "MyGameTool");
+    s.beginGroup("Presets");
+    QStringList presets = s.childGroups();
+    ui->cmbPresets->addItems(presets);
+    s.endGroup();
+}
+
+// 2. Кнопка сохранения пресета
+void MainWindow::on_btnSavePreset_clicked() {
+    bool ok;
+    QString name = QInputDialog::getText(this, "Новый пресет",
+                                         "Введите название пресета:", QLineEdit::Normal,
+                                         "", &ok);
+    if (!ok || name.isEmpty()) return;
+
+    // Создаем мини-диалог выбора компонентов
+    QDialog dlg(this);
+    dlg.setWindowTitle("Что сохранить?");
+    QVBoxLayout *layout = new QVBoxLayout(&dlg);
+
+    QCheckBox *cbRedux = new QCheckBox("Пути Редукса/Оригинала", &dlg);
+    QCheckBox *cbGP = new QCheckBox("Пути Ган-паков", &dlg);
+    QCheckBox *cbZV = new QCheckBox("Пути Звуков", &dlg);
+
+    cbRedux->setChecked(true);
+    layout->addWidget(cbRedux);
+    layout->addWidget(cbGP);
+    layout->addWidget(cbZV);
+
+    QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    layout->addWidget(buttons);
+
+    if (dlg.exec() == QDialog::Accepted) {
+        QSettings s("MyCompany", "MyGameTool");
+        s.beginGroup("Presets/" + name);
+
+        if (cbRedux->isChecked()) {
+            s.setValue("ReduxPath", ui->leditRedux->text());
+            s.setValue("OrigPath", ui->leditOrig->text());
+            s.setValue("GamePath", ui->leditPapka->text());
+        }
+        if (cbGP->isChecked()) {
+            s.setValue("GunPackPath", ui->leditGunPuck->text());
+            s.setValue("DlsPath", ui->leditDLS->text());
+        }
+        if (cbZV->isChecked()) {
+            s.setValue("SoundMod", ui->leditModZV->text());
+            s.setValue("SfxPath", ui->leditPapcaZV->text());
+        }
+
+        s.endGroup();
+        s.sync();
+
+        updatePresetsCombo();
+        ui->cmbPresets->setCurrentText(name);
+        qInfo() << "Пресет сохранен:" << name;
+    }
+}
+
+// 3. Загрузка пресета при выборе в комбобоксе
+void MainWindow::on_cmbPresets_activated(int index) {
+    QString name = ui->cmbPresets->itemText(index);
+    if (name == "Выберите пресет...") return;
+
+    QSettings s("MyCompany", "MyGameTool");
+    s.beginGroup("Presets/" + name);
+
+    // Загружаем только те поля, которые есть в этом пресете
+    if (s.contains("ReduxPath")) ui->leditRedux->setText(s.value("ReduxPath").toString());
+    if (s.contains("OrigPath")) ui->leditOrig->setText(s.value("OrigPath").toString());
+    if (s.contains("GamePath")) ui->leditPapka->setText(s.value("GamePath").toString());
+    if (s.contains("GunPackPath")) ui->leditGunPuck->setText(s.value("GunPackPath").toString());
+    if (s.contains("DlsPath")) ui->leditDLS->setText(s.value("DlsPath").toString());
+
+    if (s.contains("SoundMod")) {
+        m_modSoundPath = s.value("SoundMod").toString();
+        ui->leditModZV->setText(m_modSoundPath);
+    }
+    if (s.contains("SfxPath")) {
+        m_x64AudioSfxPath = s.value("SfxPath").toString();
+        ui->leditPapcaZV->setText(m_x64AudioSfxPath);
+    }
+
+    s.endGroup();
+
+    // Принудительно сохраняем как текущие настройки
+
+    s.setValue("LastPresetName", name);
+    s.sync();
+
+    saveSettings();
+    qInfo() << "Пресет загружен и запомнен:" << name;
+
+}
+
+// 4. Удаление пресета
+void MainWindow::on_btnDeletePreset_clicked() {
+    QString name = ui->cmbPresets->currentText();
+    if (name == "Выберите пресет..." || name.isEmpty()) return;
+
+    auto res = QMessageBox::question(this, "Удаление", "Удалить пресет " + name + "?");
+    if (res == QMessageBox::Yes) {
+        QSettings s("MyCompany", "MyGameTool");
+        s.remove("Presets/" + name);
+
+        // Если удаляем тот, что был последним — очищаем запись
+        if (s.value("LastPresetName").toString() == name) {
+            s.remove("LastPresetName");
+        }
+
+        s.sync();
+        updatePresetsCombo();
+    }
+}
+void MainWindow::on_btnOpenPress_K_clicked() {
+    ui->btnExitGP->setVisible(false);
+    animateWindowOpen(ui->oknoPresets, ui->btnOpenPress_K);
+    ui->lineV->move(1 , 205);
+    ui->lineV->setVisible(true);
+}
+
+void MainWindow::on_btnAutorskiPrava_clicked()
+{
+    QDesktopServices::openUrl(QUrl("https://github.com/dima311313-boop/ReplaceX-for-GTA-V/blob/ReplaceX/LICENSE"));
+}
+
+// Реализация кнопок
+void MainWindow::on_btnArxivRedux_clicked() {
+    QString path = QFileDialog::getOpenFileName(this, "Выберите архив с Redux", "", "Archives (*.rar *.zip *.7z)");
+    if (!path.isEmpty()) {
+        ui->leditRedux->setText("В процессе.....");
+        emit requestUnpack(0, path, ui->leditOrig->text());
+    }
+}
+
+void MainWindow::on_btnArxivGuns_clicked() {
+    QString path = QFileDialog::getOpenFileName(this, "Выберите архив с Ган-паком", "", "Archives (*.rar *.zip *.7z)");
+    if (!path.isEmpty()) {
+        ui->leditGunPuck->setText("В процессе.....");
+        emit requestUnpack(1, path, "");
+    }
+}
+
+void MainWindow::on_btnArxivSounds_clicked() {
+    QString path = QFileDialog::getOpenFileName(this, "Выберите архив со Звуками", "", "Archives (*.rar *.zip *.7z)");
+    if (!path.isEmpty()) {
+        ui->leditModZV->setText("В процессе.....");
+        emit requestUnpack(2, path, "");
+    }
+}
+
+// Слот получения результата
+void MainWindow::onUnpackResult(int type, QString resultPath) {
+    if (resultPath == "Ошибка") {
+        // Если ошибка — пишем её в нужное поле и играем звук ошибки
+        if (type == 0) ui->leditRedux->setText("Ошибка");
+        else if (type == 1) ui->leditGunPuck->setText("Ошибка");
+        else if (type == 2) ui->leditModZV->setText("Ошибка");
+
+        m_soundError->play();
+        return;
+    }
+
+    // Если всё ок — устанавливаем путь
+    if (type == 0) {
+        ui->leditRedux->setText(resultPath);
+    }
+    else if (type == 1) {
+        ui->leditGunPuck->setText(resultPath);
+    }
+    else if (type == 2) {
+        ui->leditModZV->setText(resultPath);
+        // Синхронизируем внутреннюю переменную для звуков, если она используется
+        m_modSoundPath = resultPath;
+    }
+
+    // ГЛАВНОЕ: Сохраняем в реестр/файл настроек
+    saveSettings();
+
+    m_soundSuccess->play();
+    ui->miniProgress->setText("Пути обновлены и сохранены");
+}
+
+void MainWindow::on_btnAutoCopyUpdate_clicked()
+{
+    QSettings settings("MyCompany", "MyGameTool");
+    QString rpfPath = findUpdateRpf();
+    if (!rpfPath.isEmpty()) {
+        if (copyUpdateRpfToAppDir(rpfPath)) {
+
+            settings.setValue("FirstRun", true);
+            settings.setValue("Paths/OriginalFile", ui->leditOrig->text());
+        }
+    }
 }

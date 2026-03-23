@@ -5,6 +5,7 @@
 #include <QDateTime>
 #include <QStandardPaths>
 #include <cstdio> // Для fprintf
+#include <QStringList>
 
 // Функция логирования
 void customMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
@@ -57,6 +58,21 @@ int main(int argc, char *argv[])
     QCoreApplication::setApplicationName("MyApp");
 
     MainWindow w;
-    w.show();
+    bool startMinimized = false;
+    QStringList args = QCoreApplication::arguments();
+
+    // Ищем наш флаг --autostart, который мы прописали в реестре
+    if (args.contains("--autostart")) {
+        startMinimized = true;
+    }
+
+    if (startMinimized) {
+        // Если запуск автоматический — НЕ вызываем w.show()
+        // Окно останется скрытым, но иконка в трее будет видна (так как она создается в конструкторе)
+        w.hide();
+    } else {
+        // Если пользователь сам запустил программу — показываем окно как обычно
+        w.show();
+    }
     return a.exec();
 }

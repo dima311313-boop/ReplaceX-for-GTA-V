@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "modernbutton.h"
+#include <windows.h>
+#include <winioctl.h>
 #include <QFile>
 #include <QString>
 #include <QDebug>
@@ -41,6 +43,17 @@
 #include <QProgressBar>
 #include <QGraphicsDropShadowEffect>
 #include <QStandardPaths>
+#include <QSysInfo>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QUrlQuery>
+#include <QHttpPart>
+
+
+
+
+
+
 
 QPixmap getPartiallyRoundedPixmap(const QPixmap& src, int radius, bool roundLeft) {
     if (src.isNull()) return src;
@@ -98,6 +111,8 @@ QPixmap getRoundedPixmap(const QPixmap& src, int radius) {
     QPixmap result = src;
     result.setMask(mask);
 
+
+
     return result;
 }
 
@@ -120,7 +135,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
   / /_/ / _ \/ __ \/ / __ `/ ___/ _ \ |   /
  / _, _/  __/ /_/ / / /_/ / /__/  __//   |
 /_/ |_|\___/ .___/_/\__,_/\___/\___//_/|_|
-          /_/                        v0.9.5
+          /_/                        v0.9.7
 )";
 
     qDebug().noquote() << banner;
@@ -175,6 +190,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(checkTimer, &QTimer::timeout, this, &MainWindow::checkGtaProcess);
     checkTimer->start(3000); // Проверять раз в 3 секунды
 
+    ui->infoSignals->setVisible(false);
+    ui->chkHddWarning->setVisible(false);
+    ui->lblHddAlert->setVisible(false);
     ui->installProgress->setVisible(false);
     ui->lineV->setVisible(false);
     ui->oknoPresets->setVisible(false);
@@ -188,18 +206,16 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->oknoKnopohki->setVisible(false);
     ui->btnExitGP->setVisible(false);
     ui->oknoZV->setVisible(false);
+    ui->oknoDLC->setVisible(false);
+    ui->oknoBR->setVisible(false);
+    ui->oknoZM->setVisible(false);
+    ui->Label_Text->setAttribute(Qt::WA_TransparentForMouseEvents);
+    ui->Label_TextB->setAttribute(Qt::WA_TransparentForMouseEvents);
+    ui->Label_bronik->setAttribute(Qt::WA_TransparentForMouseEvents);
+    ui->Label_pistol->setAttribute(Qt::WA_TransparentForMouseEvents);
+    ui->Label_zamen->setAttribute(Qt::WA_TransparentForMouseEvents);
+    ui->Label_TextZ->setAttribute(Qt::WA_TransparentForMouseEvents);
 
-    // пульсация
-    QGraphicsOpacityEffect *onlineEff = new QGraphicsOpacityEffect(ui->lblOnline);
-    ui->lblOnline->setGraphicsEffect(onlineEff);
-
-    QPropertyAnimation *pulse = new QPropertyAnimation(onlineEff, "opacity");
-    pulse->setDuration(2000);     // Сделаем чуть медленнее (2 секунды)
-    pulse->setStartValue(1.0);
-    pulse->setEndValue(0.75);     // Затухание всего на 25% (будет очень мягко)
-    pulse->setEasingCurve(QEasingCurve::InOutQuad); // Более плавная кривая
-    pulse->setLoopCount(-1);
-    pulse->start();
 
     //получение пути
     connect(ui->leditPapka, &QLineEdit::textChanged, [this](const QString &text) {
@@ -212,9 +228,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     ui->oknoGP->setVisible(false);
     //кнопочки тг и д
-    infoPopup = new QLabel(this);
+    // === ИНИЦИАЛИЗАЦИЯ КОНТЕЙНЕРА ПОДСКАЗОК (С ТЕНЬЮ И ПЛАВНОСТЬЮ) ===
+    // === ИНИЦИАЛИЗАЦИЯ ПОДСКАЗОК (С ТЕНЬЮ И СИСТЕМНОЙ ПЛАВНОСТЬЮ) ===
+    infoPopup = new QLabel(this); // Обычный QLabel
     infoPopup->setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
-
     infoPopup->setStyleSheet(
         "background-color: #2c3e50;"
         "color: white;"
@@ -222,19 +239,136 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
         "padding: 8px;"
         "border: 1px solid #34495e;"
         );
-    infoPopup->setText("Если у вас есть жалобы/предложения или вы хотите оставить<br>отзыв можете написать разработчику в Telegram");
-    infoPopup->adjustSize();
+    infoPopup->setWordWrap(true);
 
-    popupOpacity = new QGraphicsOpacityEffect(infoPopup);
-    infoPopup->setGraphicsEffect(popupOpacity);
-    popupOpacity->setOpacity(0.0);
+    // Навешиваем тень прямо на саму подсказку (больше никаких вложенных эффектов!)
+    QGraphicsDropShadowEffect *popupShadow = new QGraphicsDropShadowEffect(infoPopup);
+    popupShadow->setBlurRadius(15);
+    popupShadow->setXOffset(0);
+    popupShadow->setYOffset(3);
+    popupShadow->setColor(QColor(0, 0, 0, 160));
+    infoPopup->setGraphicsEffect(popupShadow);
+
+    infoPopup->setWindowOpacity(0.0); // Системная прозрачность окна по умолчанию
     infoPopup->hide();
+
+    // Регистрируем кнопку архива замененок в фильтре событий (остальные уже зарегистрированы)
+    ui->btnArxivZM->installEventFilter(this);
 
     ui->btnTelegram->installEventFilter(this);
     ui->btnDonat->installEventFilter(this);
     ui->btnArxivRedux->installEventFilter(this);
     ui->btnArxivGuns->installEventFilter(this);
     ui->btnArxivSounds->installEventFilter(this);
+    ui->btnArxivBR->installEventFilter(this);
+
+
+    // === НАСТРОЙКА ШАБЛОНА ДЛЯ ПЛАВНОЙ АНИМАЦИИ (ПИСТОЛЕТ) ===
+
+    // 1. Устанавливаем иконку в QLabel
+    ui->Label_pistol->setPixmap(QPixmap(":/izobr/pistolet.png"));
+    ui->Label_pistol->setScaledContents(true);
+
+    // 2. Навешиваем графический эффект прозрачности на иконку
+    QGraphicsOpacityEffect *iconOpacity = new QGraphicsOpacityEffect(ui->Label_pistol);
+    ui->Label_pistol->setGraphicsEffect(iconOpacity);
+    iconOpacity->setOpacity(0.7); // Изначально делаем тусклой (30% видимости)
+
+    // 3. Запоминаем координаты текста из дизайнера
+    m_textStartX = ui->Label_Text->x();
+    m_textEndX = m_textStartX + 30;
+
+    // 4. Регистрируем кнопку в фильтре событий
+    ui->listPisol->installEventFilter(this);
+    ui->btnGP_install->installEventFilter(this);
+
+
+    // === НАСТРОЙКА ШАБЛОНА ДЛЯ ПЛАВНОЙ АНИМАЦИИ (БРОНИК) ===
+
+    // 1. Устанавливаем иконку в QLabel
+    ui->Label_bronik->setPixmap(QPixmap(":/izobr/bronik.png"));
+    ui->Label_bronik->setScaledContents(true);
+
+    // 2. Навешиваем графический эффект прозрачности на иконку
+    QGraphicsOpacityEffect *iconOpacityB = new QGraphicsOpacityEffect(ui->Label_bronik);
+    ui->Label_bronik->setGraphicsEffect(iconOpacityB);
+    iconOpacityB->setOpacity(0.7); // Изначально делаем тусклой (30% видимости)
+
+    // 3. Запоминаем координаты текста из дизайнера
+    m_textStartX2 = ui->Label_TextB->x();
+    m_textEndX2 = m_textStartX2 + 30;
+
+    // 4. Регистрируем кнопку в фильтре событий
+    ui->listBronik->installEventFilter(this);
+    ui->btnBR_install->installEventFilter(this);
+
+
+    // === НАСТРОЙКА ШАБЛОНА ДЛЯ ПЛАВНОЙ АНИМАЦИИ (ЗАМЕНЕНКА) ===
+
+    // 1. Устанавливаем иконку в QLabel
+    ui->Label_zamen->setPixmap(QPixmap(":/izobr/zamen.png"));
+    ui->Label_zamen->setScaledContents(true);
+
+    // 2. Навешиваем графический эффект прозрачности на иконку
+    // ИСПРАВЛЕНО: Родителем эффекта теперь назначен ui->Label_zamen
+    QGraphicsOpacityEffect *iconOpacityZ = new QGraphicsOpacityEffect(ui->Label_zamen);
+    ui->Label_zamen->setGraphicsEffect(iconOpacityZ);
+    iconOpacityZ->setOpacity(0.7); // Изначально делаем тусклой (30% видимости)
+
+    // 3. Запоминаем координаты текста из дизайнера
+    m_textStartX3 = ui->Label_TextZ->x();
+    m_textEndX3 = m_textStartX3 + 30;
+
+    // 4. Регистрируем кнопку в фильтре событий
+    ui->listZamen->installEventFilter(this);
+    ui->btnZM_install->installEventFilter(this);
+
+    // === ВОЗВРАЩАЕМ ЦВЕТНОЕ НЕОНОВОЕ СВЕЧЕНИЕ (GLOW) ===
+
+    // 1. Убираем стандартные рамки и фоны через простые стили (оставляем иконки чистыми)
+    ui->btnSettings->setStyleSheet("border: none; background-color: transparent;");
+    ui->btnDonat->setStyleSheet("border: none; background-color: transparent;");
+    ui->btnTelegram->setStyleSheet("border: none; background-color: transparent;");
+
+    // 2. Обязательно подписываем все три кнопки на фильтр событий для анимации свечения
+    ui->btnSettings->installEventFilter(this);
+    ui->btnDonat->installEventFilter(this);
+    ui->btnTelegram->installEventFilter(this);
+
+    // 3. Создаем сочные неоновые эффекты по умолчанию (blur = 0)
+    QGraphicsOpacityEffect *opSettings = qobject_cast<QGraphicsOpacityEffect*>(ui->btnSettings->graphicsEffect());
+    if (opSettings) delete opSettings; // Очищаем старые эффекты, если они остались в памяти
+    QGraphicsDropShadowEffect *glowSettings = new QGraphicsDropShadowEffect(ui->btnSettings);
+    glowSettings->setOffset(0, 0);
+    glowSettings->setColor(QColor(255, 255, 255, 200)); // Белый неон
+    glowSettings->setBlurRadius(0);
+    ui->btnSettings->setGraphicsEffect(glowSettings);
+
+    QGraphicsOpacityEffect *opDonat = qobject_cast<QGraphicsOpacityEffect*>(ui->btnDonat->graphicsEffect());
+    if (opDonat) delete opDonat;
+    QGraphicsDropShadowEffect *glowDonat = new QGraphicsDropShadowEffect(ui->btnDonat);
+    glowDonat->setOffset(0, 0);
+    glowDonat->setColor(QColor(255, 140, 0, 220)); // Сочный оранжевый неон под цвет буквы "D!"
+    glowDonat->setBlurRadius(0);
+    ui->btnDonat->setGraphicsEffect(glowDonat);
+
+    QGraphicsOpacityEffect *opTelegram = qobject_cast<QGraphicsOpacityEffect*>(ui->btnTelegram->graphicsEffect());
+    if (opTelegram) delete opTelegram;
+    QGraphicsDropShadowEffect *glowTelegram = new QGraphicsDropShadowEffect(ui->btnTelegram);
+    glowTelegram->setOffset(0, 0);
+    glowTelegram->setColor(QColor(34, 158, 217, 220)); // Фирменный голубой неон Telegram
+    glowTelegram->setBlurRadius(0);
+    ui->btnTelegram->setGraphicsEffect(glowTelegram);
+
+    // === СТАТИЧНОЕ НЕОНОВОЕ СВЕЧЕНИЕ ДЛЯ ЛОГОТИПА ===
+    QGraphicsDropShadowEffect *logoGlow = new QGraphicsDropShadowEffect(ui->lblLogotip);
+    logoGlow->setOffset(0, 0); // Ореол строго по центру логотипа
+    logoGlow->setBlurRadius(30); // Широкое и мягкое рассеивание
+
+    // Мягкий розово-персиковый цвет неона под тон твоей короны (#e9775b) с прозрачностью 120
+    logoGlow->setColor(QColor(233, 119, 91, 120));
+
+    ui->lblLogotip->setGraphicsEffect(logoGlow);
     //end knopocki
 
 
@@ -245,6 +379,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     this->setWindowIcon(QIcon(":/izobr/IconG.ico"));
     this->setWindowTitle("ReplaceX");
 
+    ui->lblHddAlert->setAttribute(Qt::WA_TransparentForMouseEvents);
 
 
     //трей
@@ -280,9 +415,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     bool isSoundEnabled = settings.value("Settings/SoundEnabled", true).toBool();
     ui->checkSound->setChecked(isSoundEnabled);
-
-    bool isKnopkiEnabled = settings.value("Settings/KnopkiEnable", false).toBool();
-    ui->checkKnopki->setChecked(isKnopkiEnabled);
 
 
     ui->leditLogsFile->setText(QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/ReplaceX.log"));
@@ -394,8 +526,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->checkAutoLoad->setChecked(settings.value("Settings/AutoLoad", false).toBool());
 
 
+
     qDebug() << " --------------------------Пути к файлам--------------------------";
-    qInfo() << "Пути к звукам загруженны:" << m_x64AudioSfxPath << m_modSoundPath;
+    qInfo() << "Пути к звукам загруженны:" << "Папка:" << m_x64AudioSfxPath << "Мод:" << m_modSoundPath;
     qInfo() << "Пути к update.rpf загруженны:" << "Редукс: " << settings.value("Paths/ReduxFile", "").toString() << "Оригинальный: " << settings.value("Paths/OriginalFile", "").toString() << "Папка: " << savedPath;
     qInfo() << "Пути к ган пакам загруженны: " << "Ган паки: " << m_gunPackSourcePath << "Папка: " << m_dlcPacksTargetPath;
     qDebug() << razdel;
@@ -404,13 +537,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(processTimer, &QTimer::timeout, this, &MainWindow::checkProcessLoop);
     processTimer->start(500);
 
-
-    onlineTimer = new QTimer(this);
-    connect(onlineTimer, &QTimer::timeout, this, &MainWindow::updateOnlineStatus);
-    onlineTimer->start(45000); //(45 секунд)
-
-    // Сразу делаем первый запрос
-    updateOnlineStatus();
 
     // В конструктор MainWindow::MainWindow
     m_soundSuccess = new QSoundEffect(this);
@@ -421,21 +547,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     // Добавим отладку статуса
     connect(m_soundSuccess, &QSoundEffect::loadedChanged, this, [this]() {
         if (m_soundSuccess->isLoaded()) {
-            qDebug() << "Звук успеха загружен и готов!";
+            qDebug() << "Звук успешно загружен и готовы!";
         }
     });
 
     m_soundError = new QSoundEffect(this);
     m_soundError->setSource(QUrl("qrc:/sounds/sounds/Error.wav"));
     m_soundError->setVolume(0.6);
-
-    bool state = ui->checkKnopki->isChecked();
-
-    if (state) {
-        ui->btnReplaceRedux->setImagePath(":/izobr/Redux01-removebg-preview.png");
-
-        ui->btnReplaceOrig->setImagePath(":/izobr/Orig01.png");
-    }
 
     updatePresetsCombo();
 
@@ -450,9 +568,44 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
             qInfo() << "Автоматически загружен последний пресет:" << lastPreset;
         }
     }
+    // Проверяем диск
+    QString gtaPath = ui->leditPapka->text();
+    m_isHddDetected = isHDD(gtaPath);
+
+    bool alreadySeen = settings.value("Settings/HddWarningSeen", false).toBool();
+
+    if (m_isHddDetected && !alreadySeen) {
+        ui->chkHddWarning->setVisible(true);
+        ui->lblHddAlert->setVisible(true);
+        ui->infoSignals->setVisible(true);
+        ui->lblIgraInstallTo->setText("Ваша игра установленна на: HDD");
+        ui->lblIgraInstallTo->setVisible(true);
+
+        // Таймер для мигания
+        m_blinkTimer = new QTimer(this);
+        connect(m_blinkTimer, &QTimer::timeout, [this]() {
+            ui->lblHddAlert->setVisible(!ui->lblHddAlert->isVisible());
+        });
+        m_blinkTimer->start(500); // Мигаем раз в полсекунды
+    }
+    else
+    {
+        ui->lblIgraInstallTo->setText("Ваша игра установленна на: SSD");
+    }
+    applyModernShadow(ui->oknoKnopohki);
+    applyModernShadow(ui->oknoNF);
+
 }
 
 MainWindow::~MainWindow() {
+
+    // Коннекты для замененок (ZM)
+    connect(this, &MainWindow::requestManualRestoreZM, m_worker, &FileWorker::manualRestoreZM);
+    connect(this, &MainWindow::requestManualInstallZM, m_worker, &FileWorker::manualInstallZM);
+    ui->btnArxivZM->installEventFilter(this);
+    // Коннекты для РУЧНЫХ операций броников
+    connect(this, &MainWindow::requestManualRestoreArmorPacks, m_worker, &FileWorker::manualRestoreArmorPacks);
+    connect(this, &MainWindow::requestManualInstallArmorPacks, m_worker, &FileWorker::manualInstallArmorPacks);
 
     connect(ui->btnPapkaGP, &QPushButton::clicked, this, &MainWindow::on_btnPapkaGP_clicked);
     connect(ui->btnReplaceGunPuck, &QPushButton::clicked,
@@ -471,28 +624,79 @@ MainWindow::~MainWindow() {
 
     delete ui;
 }
+
+bool MainWindow::isHDD(QString path) {
+    if (path.isEmpty()) return false;
+
+    // Получаем букву диска (например, "C:")
+    QString drive = path.left(2);
+    std::wstring wDrive = L"\\\\.\\" + drive.toStdWString();
+
+    HANDLE hDevice = CreateFileW(wDrive.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                 NULL, OPEN_EXISTING, 0, NULL);
+    if (hDevice == INVALID_HANDLE_VALUE) return false;
+
+    STORAGE_PROPERTY_QUERY query = {};
+    query.PropertyId = StorageDeviceSeekPenaltyProperty;
+    query.QueryType = PropertyStandardQuery;
+
+    DEVICE_SEEK_PENALTY_DESCRIPTOR result = {};
+    DWORD bytesReturned = 0;
+
+    // Если IncursSeekPenalty == true, значит это HDD
+    bool success = DeviceIoControl(hDevice, IOCTL_STORAGE_QUERY_PROPERTY, &query, sizeof(query),
+                                   &result, sizeof(result), &bytesReturned, NULL);
+    CloseHandle(hDevice);
+
+    if (success) return result.IncursSeekPenalty;
+    return false;
+}
+
 void MainWindow::applyModernShadow(QWidget* widget) {
     if (!widget) return;
 
     QGraphicsDropShadowEffect* shadow = new QGraphicsDropShadowEffect(widget);
-    shadow->setBlurRadius(30);      // Насколько мягкая тень
-    shadow->setXOffset(0);         // Смещение по горизонтали
-    shadow->setYOffset(0);         // Смещение по вертикали (0 для эффекта свечения)
-    shadow->setColor(QColor(0, 0, 0, 200)); // Черная тень с прозрачностью
+
+    // Делаем тень абсолютно черной и плотной (alpha = 255),
+    // чтобы она гарантированно выделялась на темно-сером фоне
+    shadow->setColor(QColor(0, 0, 0, 255));
+
+    if (widget == ui->oknoKnopohki) {
+        // Левая панель с кнопками: увеличили размытие до 35 и сдвиг влево до -12
+        shadow->setBlurRadius(35);
+        shadow->setXOffset(-12);
+        shadow->setYOffset(6);
+    }
+    else if (widget == ui->oknoPresets || widget == ui->oknoGP ||
+             widget == ui->oknoDiscleamer || widget == ui->oknoZV ||
+             widget == ui->oknoDLC || widget == ui->oknoBR || widget == ui->oknoZM) {
+        // Правые всплывающие окна: увеличили размытие до 35 и сдвиг вправо до 12
+        shadow->setBlurRadius(35);
+        shadow->setXOffset(12);
+        shadow->setYOffset(6);
+    }
+    else {
+        // Центральные одиночные окна (Настройки, уведомления и др.):
+        // Мощная, глубокая круговая тень с большим размытием
+        shadow->setBlurRadius(45);
+        shadow->setXOffset(0);
+        shadow->setYOffset(10);
+    }
+
     widget->setGraphicsEffect(shadow);
 }
 
 void MainWindow::animateWindowOpen(QWidget* target, QWidget* sourceBtn) {
     // 1. Список всех «всплывающих» окон
     QList<QWidget*> subWindows = {ui->oknoPresets, ui->oknoHDD, ui->oknoSettings,
-                                   ui->oknoZV, ui->oknoGP, ui->oknoDiscleamer};
+                                   ui->oknoZV, ui->oknoGP, ui->oknoDiscleamer, ui->oknoDLC, ui->oknoBR, ui->oknoZM};
 
     // Скрываем все окна из списка, кроме того, которое открываем
     for(QWidget* w : subWindows) {
         if(w != target) w->hide();
     }
 
-    // 2. ЛОГИКА ДЛЯ oknoKnopohki: скрываем только если идем в Настройки
+    // 2. ЛОГИКА ДЛЯ oknoKnopohki
     if (target == ui->oknoSettings) {
         ui->oknoKnopohki->hide();
     } else {
@@ -664,33 +868,35 @@ void MainWindow::blurEf(bool enable)
         }
     }
 }
-
-// Твоя текущая версия программы
-const QString CURRENT_VERSION = "0.9.6";
+const QString CURRENT_VERSION = "0.9.7";
 
 void MainWindow::onResult(QNetworkReply *reply) {
-    if (reply->error() != QNetworkReply::NoError) {
-        qDebug() << "Ошибка сети:" << reply->errorString();
-        reply->deleteLater();
-        return;
-    }
-
-    // Читаем данные от сервера
     QByteArray data = reply->readAll();
     QJsonDocument doc = QJsonDocument::fromJson(data);
+    reply->deleteLater(); // Удаляем сразу, чтобы не забыть
+    if (pizda == 1) {
+        if (reply->error() != QNetworkReply::NoError) {
+            qDebug() << "Ошибка сети:" << reply->errorString();
+            pizda = 2;
+            return;
+        }
+    }
+    if(pizda == 2 || pizda == 1)  {
+        if (!doc.isObject()) {
+            qDebug() << "Ошибка: JSON не объект";
+            pizda = 3;
+            return;
+        }
+    }
     QJsonObject mainObj = doc.object();
 
-    // --- 1. ОНЛАЙН СТАТУС ---
-    // Сервер присылает его в поле "online_count"
-    if (mainObj.contains("online_count")) {
-        int online = mainObj["online_count"].toInt();
-        ui->lblOnline->setText(QString("🟢 Онлайн: %1").arg(online));
-    }
-
-    if (reply->error() != QNetworkReply::NoError) {
-        qDebug() << "Сетевая ошибка:" << reply->errorString();
-        reply->deleteLater();
-        return;
+    if(pizda == 2 || pizda == 1 || pizda == 3)  {
+        if (reply->error() != QNetworkReply::NoError) {
+            qDebug() << "Сетевая ошибка:" << reply->errorString();
+            reply->deleteLater();
+            pizda = 4;
+            return;
+        }
     }
 
     // 1. Проверка на объект (теперь у нас корень - объект { })
@@ -714,7 +920,7 @@ void MainWindow::onResult(QNetworkReply *reply) {
     // --- ЧАСТЬ 2: ОБНОВЛЕНИЕ ---
     QJsonObject updateObj = mainObj["update"].toObject();
     QString remoteVersion = updateObj["version"].toString();
-    QString downloadUrl = updateObj["url"].toString();
+    downloadUrl = updateObj["url"].toString(); // Так стало (запись в глобальное поле класса)
     QJsonArray changelogArray = updateObj["changelog"].toArray();
     QString changelogText;
     if (!changelogArray.isEmpty()) {
@@ -745,18 +951,6 @@ void MainWindow::onResult(QNetworkReply *reply) {
     }
     reply->deleteLater();
 }
-void MainWindow::updateOnlineStatus() {
-    // 1. Формируем строку
-    QString urlString = QString("https://replacex-server.onrender.com/api/stats?v=%1").arg(CURRENT_VERSION);
-
-    // 2. Используем фигурные скобки {}, чтобы компилятор не путался
-    QNetworkRequest request{QUrl(urlString)};
-
-    // Теперь manager->get увидит объект request, а не функцию
-    manager->get(request);
-}
-
-
 
 //трей
 void MainWindow::changeEvent(QEvent *event) {
@@ -898,7 +1092,11 @@ bool MainWindow::isProcessRunning(const QString &exeName) {
 
 FileWorker::Config MainWindow::getCurrentConfig() {
     FileWorker::Config cfg;
-    // Очень важно: берем текст ПРЯМО из QLineEdit
+    // Добавь этот блок внутрь метода getCurrentConfig():
+    cfg.zmSource = ui->leditZM_Pack->text();
+    cfg.zmTarget = ui->leditDLS_3->text();
+    cfg.zmBackupPath = QCoreApplication::applicationDirPath() + "/backups_zm";
+    cfg.useZM = ui->checkAutoLoadZM->isChecked();
     cfg.reduxPath = ui->leditRedux->text();
     cfg.originalPath = ui->leditOrig->text();
     cfg.gameUpdatePath = ui->leditPapka->text();
@@ -907,11 +1105,16 @@ FileWorker::Config MainWindow::getCurrentConfig() {
     cfg.soundModPath = ui->leditModZV->text();
     cfg.sfxPath = ui->leditPapcaZV->text();
 
-    // Папки бэкапов (лучше делать абсолютными)
+    // --- СБОР ДАННЫХ ДЛЯ БРОНИКОВ ---
+    cfg.armorSource = ui->leditBR_Pack->text();
+    cfg.armorTarget = ui->leditDLS_2->text();
+    cfg.armorBackupPath = QCoreApplication::applicationDirPath() + "/backups_armor";
+    cfg.useArmor = ui->checkAutoLoadBR->isChecked();
+    // ---------------------------------
+
     cfg.backupPath = QCoreApplication::applicationDirPath() + "/backups_gta";
     cfg.soundBackupPath = QCoreApplication::applicationDirPath() + "/sound_backup";
 
-    // Галочки
     cfg.useRedux = ui->checkAutoLoad->isChecked();
     cfg.useGunPack = ui->checkAutoLoadGP->isChecked();
     cfg.useSounds = ui->checkAutoLoadZV->isChecked();
@@ -928,7 +1131,9 @@ void MainWindow::checkProcessLoop() {
     int serverIndex = ui->cmbServer->currentIndex();
 
     // Проверка специфичных процессов
-    bool isGtaRunning = isProcessRunning("GTA5.exe");
+    bool isGtaRunning = isProcessRunning("GTA5.exe") ||
+                        isProcessRunning("GTA5_Enhanced.exe") ||
+                        isProcessRunning("GTA5_Enhanced_BE.exe");
     bool isEacRunning = isProcessRunning("EACLauncher.exe") || isProcessRunning("EasyAntiCheat_Launcher.exe");
     bool isRageRunning = isProcessRunning("RageMP.exe");
     bool isAltvRunning = isProcessRunning("altv-client.exe") || isProcessRunning("altv.exe");
@@ -1100,7 +1305,7 @@ void MainWindow::on_btnDonat_clicked() {
 void MainWindow::on_btnAutoSearch_clicked() {
     QString foundPath = "";
 
-    //авто поиск пути Legacy
+    // Автопоиск пути Legacy
     QStringList registryPaths = {
         "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Rockstar Games\\Grand Theft Auto V",
         "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Rockstar Games\\GTAV Legacy",
@@ -1119,7 +1324,7 @@ void MainWindow::on_btnAutoSearch_clicked() {
     if (foundPath.isEmpty()) {
         QStringList manualPaths = {
             "C:/Program Files/Rockstar Games/Grand Theft Auto V",
-            "C:/Program Files/Rockstar Games/GTAV Legacy", // Частый путь для легаси
+            "C:/Program Files/Rockstar Games/GTAV Legacy",
             "D:/Games/Rockstar Games/Grand Theft Auto V",
             "E:/Games/Grand Theft Auto V"
         };
@@ -1134,187 +1339,390 @@ void MainWindow::on_btnAutoSearch_clicked() {
 
     if (!foundPath.isEmpty()) {
         QDir gtaDir(foundPath);
-
-
         if (gtaDir.exists("update")) {
             QString updatePath = QDir::toNativeSeparators(gtaDir.absoluteFilePath("update"));
             ui->leditPapka->setText(updatePath);
 
             // Сохраняем результат
             QSettings("MyCompany", "MyGameTool").setValue("Paths/GameFolder", updatePath);
-            QMessageBox::information(this, "Найдено!", "Путь найден (Legacy/Social Club):\n" + updatePath);
-            qDebug() << "Путь найден";
+
+            // Всплывающее окно убрано, оставляем только вывод статуса в углу
             ui->miniProgress->setText("Путь к корневой папке установлен");
         } else {
-            // Если саму игру нашли, но зашли не в ту папку
+            // Если саму игру нашли, но директории update внутри нет
+            qCritical() << "[AutoSearch] Путь найден, но директория 'update' отсутствует:" << foundPath;
+            ui->leditPapka->setText("Ошибка");
             QMessageBox::warning(this, "Внимание", "Папка игры найдена, но внутри нет папки 'update'. Проверьте целостность файлов.");
         }
     } else {
+        qCritical() << "[AutoSearch] Не удалось автоматически обнаружить путь к GTA 5 в реестре или стандартных директориях.";
+        ui->leditPapka->setText("Ошибка");
         QMessageBox::critical(this, "Ошибка", "Не удалось найти GTA 5 Legacy автоматически. Пожалуйста, укажите папку вручную.");
     }
 }
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
-    // 1. Обработка btnTelegram
+    if (obj == ui->listPisol || obj == ui->btnGP_install) {
+        // Достаем эффект прозрачности иконки
+        QGraphicsOpacityEffect *opacityEff = qobject_cast<QGraphicsOpacityEffect*>(ui->Label_pistol->graphicsEffect());
+
+        if (event->type() == QEvent::Enter) {
+            // --- КУРСОР НАВЕДЕН (ПОЯВЛЕНИЕ И СМЕЩЕНИЕ) ---
+            if (opacityEff) {
+                ui->listPisol->setStyleSheet(
+                    "QListWidget, QListView {"
+                    "   background-color: #e9775b;"
+                    "   border: 1px solid #333;"
+                    "   border-top-right-radius: 0px;"
+                    "   border-bottom-right-radius: 0px;"
+                    "   border-top-left-radius: 20px;"
+                    "   border-bottom-left-radius: 20px;"
+                    "   border: 1px solid white;"
+                    "   color: white;"
+                    "   padding: 5px;"
+                    "}"
+                    );
+                QPropertyAnimation *animOpacity = new QPropertyAnimation(opacityEff, "opacity");
+                animOpacity->setDuration(250);
+                animOpacity->setStartValue(opacityEff->opacity());
+                animOpacity->setEndValue(1.0); // Загорается на 100%
+                animOpacity->setEasingCurve(QEasingCurve::OutCubic);
+                animOpacity->start(QAbstractAnimation::DeleteWhenStopped);
+            }
+
+            QPropertyAnimation *animMove = new QPropertyAnimation(ui->Label_Text, "pos");
+            animMove->setDuration(250);
+            animMove->setStartValue(ui->Label_Text->pos());
+            animMove->setEndValue(QPoint(m_textEndX, ui->Label_Text->y()));
+            animMove->setEasingCurve(QEasingCurve::OutCubic);
+            animMove->start(QAbstractAnimation::DeleteWhenStopped);
+
+            return true;
+        }
+        else if (event->type() == QEvent::Leave) {
+            // --- КУРСОР УБРАН (ВОЗВРАТ К ТУСКЛОМУ СОСТОЯНИЮ) ---
+            if (opacityEff) {
+                QPropertyAnimation *animOpacity = new QPropertyAnimation(opacityEff, "opacity");
+                animOpacity->setDuration(250);
+                animOpacity->setStartValue(opacityEff->opacity());
+                animOpacity->setEndValue(0.3); // ИЗМЕНЕНО: Возвращается к 30% прозрачности вместо 0.0
+                animOpacity->setEasingCurve(QEasingCurve::OutCubic);
+                animOpacity->start(QAbstractAnimation::DeleteWhenStopped);
+                ui->listPisol->setStyleSheet(
+                    "QListWidget, QListView {"
+                    "   background-color: #36333b;"
+                    "   border: 1px solid #333;"
+                    "   border-top-right-radius: 0px;"
+                    "   border-bottom-right-radius: 0px;"
+                    "   border-top-left-radius: 20px;"
+                    "   border-bottom-left-radius: 20px;"
+                    "   background-color: #1e1e1e;"
+                    "   border: 1px solid white;"
+                    "   color: white;"
+                    "   padding: 5px;"
+                    "}"
+                    );
+            }
+
+            QPropertyAnimation *animMove = new QPropertyAnimation(ui->Label_Text, "pos");
+            animMove->setDuration(250);
+            animMove->setStartValue(ui->Label_Text->pos());
+            animMove->setEndValue(QPoint(m_textStartX, ui->Label_Text->y()));
+            animMove->setEasingCurve(QEasingCurve::OutCubic);
+            animMove->start(QAbstractAnimation::DeleteWhenStopped);
+
+            return true;
+        }
+    }
+    if (obj == ui->btnArxivZM) {
+        if (event->type() == QEvent::Enter) {
+            showTooltip(ui->btnArxivZM, "Авто распаковка архива с замененками. Программа найдет любые папки, содержащие dlc.rpf, и извлечет их.", true);
+            return true;
+        }
+        else if (event->type() == QEvent::Leave) {
+            hideTooltip();
+            return true;
+        }
+    }
+
+    if (obj == ui->listZamen || obj == ui->btnZM_install) {
+        QGraphicsOpacityEffect *opacityEff = qobject_cast<QGraphicsOpacityEffect*>(ui->Label_zamen->graphicsEffect());
+
+        if (event->type() == QEvent::Enter) {
+            // --- КУРСОР НАВЕДЕН (ПОЯВЛЕНИЕ И СМЕЩЕНИЕ) ---
+            if (opacityEff) {
+                ui->listZamen->setStyleSheet(
+                    "QListWidget, QListView {"
+                    "   background-color: #e9775b;"
+                    "   border: 1px solid #333;"
+                    "   border-top-right-radius: 0px;"
+                    "   border-bottom-right-radius: 0px;"
+                    "   border-top-left-radius: 20px;"
+                    "   border-bottom-left-radius: 20px;"
+                    "   border: 1px solid white;"
+                    "   color: white;"
+                    "   padding: 5px;"
+                    "}"
+                    );
+                QPropertyAnimation *animOpacity = new QPropertyAnimation(opacityEff, "opacity");
+                animOpacity->setDuration(250);
+                animOpacity->setStartValue(opacityEff->opacity());
+                animOpacity->setEndValue(1.0); // Загорается на 100%
+                animOpacity->setEasingCurve(QEasingCurve::OutCubic);
+                animOpacity->start(QAbstractAnimation::DeleteWhenStopped);
+            }
+
+            QPropertyAnimation *animMove = new QPropertyAnimation(ui->Label_TextZ, "pos");
+            animMove->setDuration(250);
+            animMove->setStartValue(ui->Label_TextZ->pos());
+            animMove->setEndValue(QPoint(m_textEndX3, ui->Label_TextZ->y()));
+            animMove->setEasingCurve(QEasingCurve::OutCubic);
+            animMove->start(QAbstractAnimation::DeleteWhenStopped);
+
+            return true;
+        }
+        else if (event->type() == QEvent::Leave) {
+            // --- КУРСОР УБРАН (ВОЗВРАТ К ТУСКЛОМУ СОСТОЯНИЮ) ---
+            if (opacityEff) {
+                QPropertyAnimation *animOpacity = new QPropertyAnimation(opacityEff, "opacity");
+                animOpacity->setDuration(250);
+                animOpacity->setStartValue(opacityEff->opacity());
+                animOpacity->setEndValue(0.3); // ИЗМЕНЕНО: Возвращается к 30% прозрачности вместо 0.0
+                animOpacity->setEasingCurve(QEasingCurve::OutCubic);
+                animOpacity->start(QAbstractAnimation::DeleteWhenStopped);
+                ui->listZamen->setStyleSheet(
+                    "QListWidget, QListView {"
+                    "   background-color: #36333b;"
+                    "   border: 1px solid #333;"
+                    "   border-top-right-radius: 0px;"
+                    "   border-bottom-right-radius: 0px;"
+                    "   border-top-left-radius: 20px;"
+                    "   border-bottom-left-radius: 20px;"
+                    "   background-color: #1e1e1e;"
+                    "   border: 1px solid white;"
+                    "   color: white;"
+                    "   padding: 5px;"
+                    "}"
+                    );
+            }
+
+            QPropertyAnimation *animMove = new QPropertyAnimation(ui->Label_TextZ, "pos");
+            animMove->setDuration(250);
+            animMove->setStartValue(ui->Label_TextZ->pos());
+            animMove->setEndValue(QPoint(m_textStartX3, ui->Label_TextZ->y()));
+            animMove->setEasingCurve(QEasingCurve::OutCubic);
+            animMove->start(QAbstractAnimation::DeleteWhenStopped);
+
+            return true;
+        }
+    }
+
+    // 6. Обработка архива Броников
+    if (obj == ui->btnArxivBR) {
+        if (event->type() == QEvent::Enter) {
+            showTooltip(ui->btnArxivBR, "Авто распаковка вашего архива с брониками - программа сама найдет папки вроде mpapartment или patchday...ng, извлечет и укажет пути к ним.", true);
+            return true;
+        }
+        else if (event->type() == QEvent::Leave) {
+            hideTooltip();
+            return true;
+        }
+    }
+
+    if (obj == ui->listBronik || obj == ui->btnBR_install) {
+        QGraphicsOpacityEffect *opacityEff = qobject_cast<QGraphicsOpacityEffect*>(ui->Label_bronik->graphicsEffect());
+
+        if (event->type() == QEvent::Enter) {
+            // --- КУРСОР НАВЕДЕН (ПОЯВЛЕНИЕ И СМЕЩЕНИЕ) ---
+            if (opacityEff) {
+                ui->listBronik->setStyleSheet(
+                    "QListWidget, QListView {"
+                    "   background-color: #e9775b;"
+                    "   border: 1px solid #333;"
+                    "   border-top-right-radius: 0px;"
+                    "   border-bottom-right-radius: 0px;"
+                    "   border-top-left-radius: 20px;"
+                    "   border-bottom-left-radius: 20px;"
+                    "   border: 1px solid white;"
+                    "   color: white;"
+                    "   padding: 5px;"
+                    "}"
+                    );
+                QPropertyAnimation *animOpacity = new QPropertyAnimation(opacityEff, "opacity");
+                animOpacity->setDuration(250);
+                animOpacity->setStartValue(opacityEff->opacity());
+                animOpacity->setEndValue(1.0); // Загорается на 100%
+                animOpacity->setEasingCurve(QEasingCurve::OutCubic);
+                animOpacity->start(QAbstractAnimation::DeleteWhenStopped);
+            }
+
+            QPropertyAnimation *animMove = new QPropertyAnimation(ui->Label_TextB, "pos");
+            animMove->setDuration(250);
+            animMove->setStartValue(ui->Label_TextB->pos());
+            animMove->setEndValue(QPoint(m_textEndX2, ui->Label_TextB->y()));
+            animMove->setEasingCurve(QEasingCurve::OutCubic);
+            animMove->start(QAbstractAnimation::DeleteWhenStopped);
+
+            return true;
+        }
+        else if (event->type() == QEvent::Leave) {
+            // --- КУРСОР УБРАН (ВОЗВРАТ К ТУСКЛОМУ СОСТОЯНИЮ) ---
+            if (opacityEff) {
+                QPropertyAnimation *animOpacity = new QPropertyAnimation(opacityEff, "opacity");
+                animOpacity->setDuration(250);
+                animOpacity->setStartValue(opacityEff->opacity());
+                animOpacity->setEndValue(0.3); // ИЗМЕНЕНО: Возвращается к 30% прозрачности вместо 0.0
+                animOpacity->setEasingCurve(QEasingCurve::OutCubic);
+                animOpacity->start(QAbstractAnimation::DeleteWhenStopped);
+                ui->listBronik->setStyleSheet(
+                    "QListWidget, QListView {"
+                    "   background-color: #36333b;"
+                    "   border: 1px solid #333;"
+                    "   border-top-right-radius: 0px;"
+                    "   border-bottom-right-radius: 0px;"
+                    "   border-top-left-radius: 20px;"
+                    "   border-bottom-left-radius: 20px;"
+                    "   background-color: #1e1e1e;"
+                    "   border: 1px solid white;"
+                    "   color: white;"
+                    "   padding: 5px;"
+                    "}"
+                    );
+            }
+
+            QPropertyAnimation *animMove = new QPropertyAnimation(ui->Label_TextB, "pos");
+            animMove->setDuration(250);
+            animMove->setStartValue(ui->Label_TextB->pos());
+            animMove->setEndValue(QPoint(m_textStartX2, ui->Label_TextB->y()));
+            animMove->setEasingCurve(QEasingCurve::OutCubic);
+            animMove->start(QAbstractAnimation::DeleteWhenStopped);
+
+            return true;
+        }
+    }
+    // 1. Неоновая обработка btnTelegram
     if (obj == ui->btnTelegram) {
+        QGraphicsDropShadowEffect *glow = qobject_cast<QGraphicsDropShadowEffect*>(ui->btnTelegram->graphicsEffect());
+
         if (event->type() == QEvent::Enter) {
-            infoPopup->setText("Если у вас есть жалобы/предложения или вы хотите оставить<br>отзыв можете написать разработчику в Telegram");
-            infoPopup->adjustSize();
-
-            QPoint globalPos = ui->btnTelegram->mapToGlobal(QPoint(0, 0));
-            int x = globalPos.x() + (ui->btnTelegram->width() / 2) - (infoPopup->width() / 2);
-            int y = globalPos.y() - infoPopup->height() - 10;
-
-            infoPopup->move(x, y);
-            infoPopup->show();
-
-            QPropertyAnimation *anim = new QPropertyAnimation(popupOpacity, "opacity");
-            anim->setDuration(200);
-            anim->setStartValue(popupOpacity->opacity());
-            anim->setEndValue(1.0);
-            anim->start(QAbstractAnimation::DeleteWhenStopped);
+            // Плавно зажигаем фирменный голубой неон вокруг кнопки
+            if (glow) {
+                QPropertyAnimation *a = new QPropertyAnimation(glow, "blurRadius");
+                a->setDuration(180);
+                a->setStartValue(glow->blurRadius());
+                a->setEndValue(18); // Радиус свечения
+                a->start(QAbstractAnimation::DeleteWhenStopped);
+            }
+            showTooltip(ui->btnTelegram, "Если у вас есть жалобы/предложения или вы хотите оставить<br>отзыв можете написать разработчику в Telegram", false);
             return true;
         }
         else if (event->type() == QEvent::Leave) {
-            QPropertyAnimation *anim = new QPropertyAnimation(popupOpacity, "opacity");
-            anim->setDuration(200);
-            anim->setStartValue(popupOpacity->opacity());
-            anim->setEndValue(0.0);
-            connect(anim, &QPropertyAnimation::finished, infoPopup, &QLabel::hide);
-            anim->start(QAbstractAnimation::DeleteWhenStopped);
+            // Плавно тушим неон до 0
+            if (glow) {
+                QPropertyAnimation *a = new QPropertyAnimation(glow, "blurRadius");
+                a->setDuration(180);
+                a->setStartValue(glow->blurRadius());
+                a->setEndValue(0);
+                a->start(QAbstractAnimation::DeleteWhenStopped);
+            }
+            hideTooltip();
             return true;
         }
     }
 
-    // 2. Обработка btnDonat
+    // 2. Неоновая обработка btnDonat
     if (obj == ui->btnDonat) {
+        QGraphicsDropShadowEffect *glow = qobject_cast<QGraphicsDropShadowEffect*>(ui->btnDonat->graphicsEffect());
+
         if (event->type() == QEvent::Enter) {
-            infoPopup->setText("Благодарность проекту донатом");
-            infoPopup->adjustSize();
-
-            QPoint globalPos = ui->btnDonat->mapToGlobal(QPoint(0, 0));
-            int x = globalPos.x() + (ui->btnDonat->width() / 2) - (infoPopup->width() / 2);
-            int y = globalPos.y() - infoPopup->height() - 10;
-
-            infoPopup->move(x, y);
-            infoPopup->show();
-
-            QPropertyAnimation *anim = new QPropertyAnimation(popupOpacity, "opacity");
-            anim->setDuration(200);
-            anim->setStartValue(popupOpacity->opacity());
-            anim->setEndValue(1.0);
-            anim->start(QAbstractAnimation::DeleteWhenStopped);
+            // Плавно зажигаем сочный оранжевый неон вокруг кнопки
+            if (glow) {
+                QPropertyAnimation *a = new QPropertyAnimation(glow, "blurRadius");
+                a->setDuration(180);
+                a->setStartValue(glow->blurRadius());
+                a->setEndValue(18);
+                a->start(QAbstractAnimation::DeleteWhenStopped);
+            }
+            showTooltip(ui->btnDonat, "Благодарность проекту донатом", false);
             return true;
         }
         else if (event->type() == QEvent::Leave) {
-            QPropertyAnimation *anim = new QPropertyAnimation(popupOpacity, "opacity");
-            anim->setDuration(200);
-            anim->setStartValue(popupOpacity->opacity());
-            anim->setEndValue(0.0);
-            connect(anim, &QPropertyAnimation::finished, infoPopup, &QLabel::hide);
-            anim->start(QAbstractAnimation::DeleteWhenStopped);
+            // Плавно тушим неон до 0
+            if (glow) {
+                QPropertyAnimation *a = new QPropertyAnimation(glow, "blurRadius");
+                a->setDuration(180);
+                a->setStartValue(glow->blurRadius());
+                a->setEndValue(0);
+                a->start(QAbstractAnimation::DeleteWhenStopped);
+            }
+            hideTooltip();
             return true;
         }
     }
+
+    // 3. Неоновая обработка btnSettings (Шестеренка)
+    if (obj == ui->btnSettings) {
+        QGraphicsDropShadowEffect *glow = qobject_cast<QGraphicsDropShadowEffect*>(ui->btnSettings->graphicsEffect());
+
+        if (event->type() == QEvent::Enter) {
+            // Плавно зажигаем белый ореол вокруг шестеренки
+            if (glow) {
+                QPropertyAnimation *a = new QPropertyAnimation(glow, "blurRadius");
+                a->setDuration(180);
+                a->setStartValue(glow->blurRadius());
+                a->setEndValue(18);
+                a->start(QAbstractAnimation::DeleteWhenStopped);
+            }
+            return true;
+        }
+        else if (event->type() == QEvent::Leave) {
+            // Плавно гасим белый ореол до 0
+            if (glow) {
+                QPropertyAnimation *a = new QPropertyAnimation(glow, "blurRadius");
+                a->setDuration(180);
+                a->setStartValue(glow->blurRadius());
+                a->setEndValue(0);
+                a->start(QAbstractAnimation::DeleteWhenStopped);
+            }
+            return true;
+        }
+    }
+    // 3. Обработка архива Redux
     if (obj == ui->btnArxivRedux) {
         if (event->type() == QEvent::Enter) {
-            infoPopup->setFixedWidth(250);
-            infoPopup->setWordWrap(true);
-            infoPopup->adjustSize();
-            infoPopup->setText("Авто распаковка вашего архива с редуксом - программа сама найдет нужные файлы, извлечет и укажет пути к ним. Процесс обнаружения и извлечения занимает от 5-10 секунд. (На данный момент из поддержуемых запароленных архивов - только архивы от Majestic-mods.ru)");
-            infoPopup->adjustSize();
-
-            QPoint globalPos = ui->btnArxivRedux->mapToGlobal(QPoint(0, 0));
-            int x = globalPos.x() + (ui->btnArxivRedux->width() / 2) - (infoPopup->width() / 2);
-            int y = globalPos.y() - infoPopup->height() - 10;
-
-            infoPopup->move(x, y);
-            infoPopup->show();
-
-            QPropertyAnimation *anim = new QPropertyAnimation(popupOpacity, "opacity");
-            anim->setDuration(200);
-            anim->setStartValue(popupOpacity->opacity());
-            anim->setEndValue(1.0);
-            anim->start(QAbstractAnimation::DeleteWhenStopped);
+            showTooltip(ui->btnArxivRedux, "Авто распаковка вашего архива с редуксом - программа сама найдет нужные файлы, извлечет и укажет пути к ним. Процесс обнаружения и извлечения занимает от 5-10 секунд. (На данный момент из поддержуемых запароленных архивов - только архивы от Majestic-mods.ru)", true);
             return true;
         }
         else if (event->type() == QEvent::Leave) {
-            QPropertyAnimation *anim = new QPropertyAnimation(popupOpacity, "opacity");
-            anim->setDuration(200);
-            anim->setStartValue(popupOpacity->opacity());
-            anim->setEndValue(0.0);
-            connect(anim, &QPropertyAnimation::finished, infoPopup, &QLabel::hide);
-            anim->start(QAbstractAnimation::DeleteWhenStopped);
+            hideTooltip();
             return true;
         }
     }
+
     if (obj == ui->btnArxivGuns) {
         if (event->type() == QEvent::Enter) {
-            infoPopup->setFixedWidth(250);
-            infoPopup->setWordWrap(true);
-            infoPopup->adjustSize();
-            infoPopup->setText("Авто распаковка вашего архива с ган паком - программа сама найдет нужные файлы, извлечет и укажет пути к ним. Процесс обнаружения и извлечения занимает от 5-10 секунд. (На данный момент из поддержуемых запароленных архивов - только архивы от Majestic-mods.ru)");
-            infoPopup->adjustSize();
-
-            QPoint globalPos = ui->btnArxivGuns->mapToGlobal(QPoint(0, 0));
-            int x = globalPos.x() + (ui->btnArxivGuns->width() / 2) - (infoPopup->width() / 2);
-            int y = globalPos.y() - infoPopup->height() - 10;
-
-            infoPopup->move(x, y);
-            infoPopup->show();
-
-            QPropertyAnimation *anim = new QPropertyAnimation(popupOpacity, "opacity");
-            anim->setDuration(200);
-            anim->setStartValue(popupOpacity->opacity());
-            anim->setEndValue(1.0);
-            anim->start(QAbstractAnimation::DeleteWhenStopped);
+            showTooltip(ui->btnArxivGuns, "Авто распаковка вашего архива с ган паком - программа сама найдет нужные файлы, извлечет и укажет пути к ним. Процесс обнаружения и извлечения занимает от 5-10 секунд. (На данный момент из поддержуемых запароленных архивов - только архивы от Majestic-mods.ru)", true);
             return true;
         }
         else if (event->type() == QEvent::Leave) {
-            QPropertyAnimation *anim = new QPropertyAnimation(popupOpacity, "opacity");
-            anim->setDuration(200);
-            anim->setStartValue(popupOpacity->opacity());
-            anim->setEndValue(0.0);
-            connect(anim, &QPropertyAnimation::finished, infoPopup, &QLabel::hide);
-            anim->start(QAbstractAnimation::DeleteWhenStopped);
+            hideTooltip();
             return true;
         }
     }
+
     if (obj == ui->btnArxivSounds) {
         if (event->type() == QEvent::Enter) {
-            infoPopup->setFixedWidth(250);
-            infoPopup->setWordWrap(true);
-            infoPopup->adjustSize();
-            infoPopup->setText("Авто распаковка вашего архива с модифицированными звуками - программа сама найдет нужные файлы, извлечет и укажет пути к ним. Процесс обнаружения и извлечения занимает от 5-10секунд. (На данный момент из поддержуемых запароленных архивов - только архивы от Majestic-mods.ru)");
-            infoPopup->adjustSize();
-
-            QPoint globalPos = ui->btnArxivSounds->mapToGlobal(QPoint(0, 0));
-            int x = globalPos.x() + (ui->btnArxivSounds->width() / 2) - (infoPopup->width() / 2);
-            int y = globalPos.y() - infoPopup->height() - 10;
-
-            infoPopup->move(x, y);
-            infoPopup->show();
-
-            QPropertyAnimation *anim = new QPropertyAnimation(popupOpacity, "opacity");
-            anim->setDuration(200);
-            anim->setStartValue(popupOpacity->opacity());
-            anim->setEndValue(1.0);
-            anim->start(QAbstractAnimation::DeleteWhenStopped);
+            showTooltip(ui->btnArxivSounds, "Авто распаковка вашего архива с модифицированными звуками - программа сама найдет нужные файлы, извлечет и укажет пути к ним. Процесс обнаружения и извлечения занимает от 5-10 секунд. (На данный момент из поддержуемых запароленных архивов - только архивы от Majestic-mods.ru)", true);
             return true;
         }
         else if (event->type() == QEvent::Leave) {
-            QPropertyAnimation *anim = new QPropertyAnimation(popupOpacity, "opacity");
-            anim->setDuration(200);
-            anim->setStartValue(popupOpacity->opacity());
-            anim->setEndValue(0.0);
-            connect(anim, &QPropertyAnimation::finished, infoPopup, &QLabel::hide);
-            anim->start(QAbstractAnimation::DeleteWhenStopped);
+            hideTooltip();
             return true;
         }
     }
+
     return QMainWindow::eventFilter(obj, event);
 }
-
 
 
 //tg
@@ -1325,6 +1733,7 @@ void MainWindow::on_btnTelegram_clicked()
 }
 //ган пак
 void MainWindow::on_btnOknoDop_clicked() {
+    ui->btnExitGP->move(564, 35);
     if(oknoDop) {
         ui->btnExitGP->setVisible(false);
         animateWindowOpen(ui->oknoDiscleamer, ui->btnOknoDop);
@@ -1340,7 +1749,7 @@ void MainWindow::on_btnExitGP_clicked()
 
     // Список всех твоих окон
     QList<QWidget*> windows = {ui->oknoPresets, ui->oknoSettings, ui->oknoGP,
-                                ui->oknoDiscleamer, ui->oknoZV, ui->oknoHDD};
+                                ui->oknoDiscleamer, ui->oknoZV, ui->oknoHDD, ui->oknoDLC, ui->oknoBR, ui->oknoZM};
 
     // Запускаем анимацию для того окна, которое сейчас видно
     for(QWidget* w : windows) {
@@ -1383,7 +1792,6 @@ void MainWindow::on_btnPapkaGP_clicked()
 }
 void MainWindow::on_btnAutoSearchDLS_clicked()
 {
-    // 1. Ищем в реестре (Rockstar/Steam)
     QSettings rsReg("HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Rockstar Games\\Grand Theft Auto V", QSettings::NativeFormat);
     QString basePath = rsReg.value("InstallFolder").toString();
 
@@ -1395,7 +1803,6 @@ void MainWindow::on_btnAutoSearchDLS_clicked()
         }
     }
 
-    // 2. Формируем целевой путь
     QString targetPath;
     if (!basePath.isEmpty()) {
         targetPath = basePath + "/update/x64/dlcpacks";
@@ -1407,7 +1814,9 @@ void MainWindow::on_btnAutoSearchDLS_clicked()
         }
     }
 
-    // 3. Если не нашли — ручной выбор
+    qCritical() << "[AutoSearchDLS] Не удалось автоматически определить директорию dlcpacks для Ган-паков.";
+    ui->leditDLS->setText("Ошибка"); // Выводим "Ошибка" в поле ввода
+
     QString manualPath = QFileDialog::getExistingDirectory(
         this,
         "Укажите папку ...\\update\\x64\\dlcpacks",
@@ -1418,7 +1827,6 @@ void MainWindow::on_btnAutoSearchDLS_clicked()
         ui->leditDLS->setText(m_dlcPacksTargetPath);
         QSettings("MyCompany", "MyGameTool").setValue("Paths/DlcPacksTarget", m_dlcPacksTargetPath);
     }
-
 }
 void MainWindow::on_btnDLS_clicked()
 {
@@ -1448,21 +1856,39 @@ void MainWindow::on_checkAutoLoadGP_toggled(bool checked) {
     if (pathDLS.endsWith("/")) pathDLS.chop(1);
     if (pathGunPack.endsWith("/")) pathGunPack.chop(1);
 
-    // 1. Проверка leditDLS: папка dlcpacks на конце
     bool isDlsOk = pathDLS.endsWith("/dlcpacks") && QDir(pathDLS).exists();
-
-    // 2. Проверка leditGunPuck: отсутствие запрещенных имен в самом ПУТИ
     bool pathHasForbidden = pathGunPack.contains("patchday18ng") || pathGunPack.contains("mpapartment");
 
-    // 3. Проверка содержимого папки GunPuck
     QDir gpDir(pathGunPack);
     bool hasRequiredContent = gpDir.exists("patchday18ng") || gpDir.exists("mpapartment");
 
     if (isDlsOk && !pathHasForbidden && hasRequiredContent) {
-        // Проверка количества файлов для предупреждения
-        QStringList entries = gpDir.entryList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
-        if (entries.size() > 2) {
-            QMessageBox::warning(this, "Внимание", "В папке ганпаков больше 2-х файлов/папок. Убедитесь, что это не вызовет конфликтов.");
+        QStringList conflicts;
+        QStringList gpEntries = gpDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+
+        // Конфликт с брониками
+        if (ui->checkAutoLoadBR->isChecked()) {
+            QDir brDir(ui->leditBR_Pack->text());
+            QStringList brEntries = brDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+            foreach(const QString &folder, gpEntries) {
+                if (brEntries.contains(folder, Qt::CaseInsensitive)) conflicts << folder + " (Броники)";
+            }
+        }
+
+        // Конфликт с замененками
+        if (ui->checkAutoLoadZM->isChecked()) {
+            QDir zmDir(ui->leditZM_Pack->text());
+            QStringList zmEntries = zmDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+            foreach(const QString &folder, gpEntries) {
+                if (zmEntries.contains(folder, Qt::CaseInsensitive)) conflicts << folder + " (Замененки)";
+            }
+        }
+
+        if (!conflicts.isEmpty()) {
+            QMessageBox::warning(this, "Конфликт путей",
+                                 "Обнаружены совпадающие папки установки в разных модах:\n" +
+                                     conflicts.join("\n") +
+                                     "\nОни перезапишут файлы друг друга при автозапуске!");
         }
 
         QSettings("MyCompany", "MyGameTool").setValue("checkAutoLoadGP", true);
@@ -1473,13 +1899,79 @@ void MainWindow::on_checkAutoLoadGP_toggled(bool checked) {
 
         QStringList errors;
         if (!isDlsOk) errors << "- Путь DLS должен заканчиваться на 'dlcpacks'";
-        if (pathHasForbidden) errors << "- В самом пути к ганпакам не должно быть имен 'patchday18ng' или 'mpapartment'";
-        if (!hasRequiredContent) errors << "- Внутри выбранной папки должна быть папка 'patchday18ng' или 'mpapartment'";
+        if (pathHasForbidden) errors << "- В самом пути к ганпакам не должно быть 'patchday18ng' или 'mpapartment'";
+        if (!hasRequiredContent) errors << "- Внутри папки должна быть папка 'patchday18ng' или 'mpapartment'";
 
         QMessageBox::critical(this, "Ошибка GunPack", "Проверьте условия:\n" + errors.join("\n"));
     }
 }
 
+void MainWindow::on_checkAutoLoadBR_toggled(bool checked) {
+    if (!checked) {
+        QSettings("MyCompany", "MyGameTool").setValue("checkAutoLoadBR", false);
+        return;
+    }
+
+    QString pathDLS = QDir::fromNativeSeparators(ui->leditDLS_2->text()).toLower();
+    QString pathArmor = QDir::fromNativeSeparators(ui->leditBR_Pack->text()).toLower();
+
+    if (pathDLS.endsWith("/")) pathDLS.chop(1);
+    if (pathArmor.endsWith("/")) pathArmor.chop(1);
+
+    bool isDlsOk = pathDLS.endsWith("/dlcpacks") && QDir(pathDLS).exists();
+
+    QDir brDir(pathArmor);
+    bool hasRequiredContent = false;
+    QStringList brEntries = brDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    foreach(const QString &entry, brEntries) {
+        if (entry.compare("mpapartment", Qt::CaseInsensitive) == 0 ||
+            (entry.startsWith("patchday", Qt::CaseInsensitive) && entry.endsWith("ng", Qt::CaseInsensitive))) {
+            hasRequiredContent = true;
+            break;
+        }
+    }
+
+    if (isDlsOk && hasRequiredContent) {
+        QStringList conflicts;
+
+        // Конфликт с ганпаками
+        if (ui->checkAutoLoadGP->isChecked()) {
+            QDir gpDir(ui->leditGunPuck->text());
+            QStringList gpEntries = gpDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+            foreach(const QString &folder, brEntries) {
+                if (gpEntries.contains(folder, Qt::CaseInsensitive)) conflicts << folder + " (Ган-паки)";
+            }
+        }
+
+        // Конфликт с замененками
+        if (ui->checkAutoLoadZM->isChecked()) {
+            QDir zmDir(ui->leditZM_Pack->text());
+            QStringList zmEntries = zmDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+            foreach(const QString &folder, brEntries) {
+                if (zmEntries.contains(folder, Qt::CaseInsensitive)) conflicts << folder + " (Замененки)";
+            }
+        }
+
+        if (!conflicts.isEmpty()) {
+            QMessageBox::warning(this, "Конфликт путей",
+                                 "Обнаружены совпадающие папки установки в разных модах:\n" +
+                                     conflicts.join("\n") +
+                                     "\nОни перезапишут файлы друг друга при автозапуске!");
+        }
+
+        QSettings("MyCompany", "MyGameTool").setValue("checkAutoLoadBR", true);
+    } else {
+        ui->checkAutoLoadBR->blockSignals(true);
+        ui->checkAutoLoadBR->setChecked(false);
+        ui->checkAutoLoadBR->blockSignals(false);
+
+        QStringList errors;
+        if (!isDlsOk) errors << "- Путь DLS должен заканчиваться на 'dlcpacks'";
+        if (!hasRequiredContent) errors << "- В папке броников должна быть 'mpapartment' или любая папка 'patchday...ng'";
+
+        QMessageBox::critical(this, "Ошибка Броников", "Проверьте условия:\n" + errors.join("\n"));
+    }
+}
 
 
 void MainWindow::on_btnReplaceGunPuck_clicked() {
@@ -1719,12 +2211,14 @@ QString MainWindow::autoFindUpdateFolder() {
 //окошко доп функций
 void MainWindow::on_btnGanpacOpen_clicked() {
     ui->btnExitGP->setVisible(false);
-    animateWindowOpen(ui->oknoGP, ui->btnGanpacOpen);
+    ui->btnExitGP->move(564, 35);
+    animateWindowOpen(ui->oknoDLC, ui->btnGanpacOpen);
     ui->lineV->move(1 , 25);
     ui->lineV->setVisible(true);
 }
 void MainWindow::on_btnZVOpen_clicked() {
     ui->btnExitGP->setVisible(false);
+    ui->btnExitGP->move(564, 35);
     animateWindowOpen(ui->oknoZV, ui->btnZVOpen);
     ui->lineV->move(1 , 85);
     ui->lineV->setVisible(true);
@@ -1735,13 +2229,10 @@ void MainWindow::on_btnZVOpen_clicked() {
 void MainWindow::on_btnAutoSearchZV_clicked() {
     qInfo() << "=== Автопоиск x64\\audio\\sfx ===";
 
-
-    // 1. Проверка реестра Rockstar
     QSettings rsReg("HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Rockstar Games\\Grand Theft Auto V", QSettings::NativeFormat);
     QString basePath = rsReg.value("InstallFolder").toString();
 
     if (basePath.isEmpty()) {
-        // 2. Проверка Steam
         QSettings steamReg("HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Valve\\Steam", QSettings::NativeFormat);
         QString steamPath = steamReg.value("InstallPath").toString();
         if (!steamPath.isEmpty()) {
@@ -1749,7 +2240,6 @@ void MainWindow::on_btnAutoSearchZV_clicked() {
         }
     }
 
-    // 3. Формируем путь до x64\audio\sfx
     if (!basePath.isEmpty()) {
         QString sfxPath = basePath + "/x64/audio/sfx";
         if (QDir(sfxPath).exists()) {
@@ -1759,16 +2249,13 @@ void MainWindow::on_btnAutoSearchZV_clicked() {
             QSettings settings("MyCompany", "MyGameTool");
             settings.setValue("Paths/X64AudioSfx", m_x64AudioSfxPath);
 
-
-            qInfo() << "Путь до x64\\audio\\sfx найден:" << m_x64AudioSfxPath;
-            /*
-            QMessageBox::information(this, "Найдено", "Путь до x64\\audio\\sfx определён автоматически.");
-            */
+            qInfo() << "Путь до x64\\audio\\sfx найден автоматически:" << m_x64AudioSfxPath;
             return;
         }
     }
 
-    qInfo() << "Автопоиск не удался.";
+    qCritical() << "[AutoSearchZV] Не удалось автоматически найти папку x64\\audio\\sfx в системном реестре.";
+    ui->leditPapcaZV->setText("Ошибка"); // Выводим "Ошибка" в поле ввода
     QMessageBox::warning(this, "Не найдено", "Автопоиск папки x64\\audio\\sfx не удался. Укажите вручную.");
 }
 
@@ -1873,6 +2360,12 @@ bool MainWindow::backupOriginalRpfFiles(const QStringList &modFiles) {
 
 void MainWindow::saveSettings() {
     QSettings s("MyCompany", "MyGameTool");
+    s.setValue("ZmSourcePath", ui->leditZM_Pack->text());
+    s.setValue("ZmTargetPath", ui->leditDLS_3->text());
+    s.setValue("checkAutoLoadZM", ui->checkAutoLoadZM->isChecked());
+    s.setValue("ArmorSourcePath", ui->leditBR_Pack->text());
+    s.setValue("ArmorTargetPath", ui->leditDLS_2->text());
+    s.setValue("checkAutoLoadBR", ui->checkAutoLoadBR->isChecked());
     s.setValue("ReduxPath", ui->leditRedux->text());
     s.setValue("GamePath", ui->leditPapka->text());
     s.setValue("OrigPath", ui->leditOrig->text());
@@ -1897,6 +2390,22 @@ void MainWindow::loadSettings() {
     ui->leditOrig->setText(s.value("OrigPath").toString());
     ui->leditGunPuck->setText(s.value("GunPackPath").toString());
     ui->leditDLS->setText(s.value("DlsPath").toString());
+    ui->leditBR_Pack->setText(s.value("ArmorSourcePath").toString());
+    ui->leditDLS_2->setText(s.value("ArmorTargetPath").toString());
+    ui->checkAutoLoadBR->blockSignals(true);
+    ui->checkAutoLoadBR->setChecked(s.value("checkAutoLoadBR", false).toBool());
+    ui->checkAutoLoadBR->blockSignals(false);
+    ui->leditZM_Pack->setText(s.value("ZmSourcePath").toString());
+    ui->leditDLS_3->setText(s.value("ZmTargetPath").toString());
+    ui->checkAutoLoadZM->blockSignals(true);
+    ui->checkAutoLoadZM->setChecked(s.value("checkAutoLoadZM", false).toBool());
+    ui->checkAutoLoadZM->blockSignals(false);
+
+    m_zmSourcePath = s.value("ZmSourcePath").toString();
+    m_zmTargetPath = s.value("ZmTargetPath").toString();
+
+    m_armorSourcePath = s.value("ArmorSourcePath").toString();
+    m_armorTargetPath = s.value("ArmorTargetPath").toString();
     m_modSoundPath = s.value("SoundMod").toString();
     m_x64AudioSfxPath = s.value("SfxPath").toString();
 
@@ -2060,15 +2569,20 @@ bool MainWindow::restoreSounds() {
 //HDD
 void MainWindow::on_btnHDD_OpenDis_clicked() {
     ui->btnExitGP->setVisible(false);
+    ui->btnExitGP->move(564, 35);
     animateWindowOpen(ui->oknoHDD, ui->btnHDD_OpenDis);
     ui->lineV->move(1 , 145);
     ui->lineV->setVisible(true);
 }
 void MainWindow::on_btnNext_clicked()
 {
+    ui->lblIgraInstallTo->setVisible(false);
     ui->Instruction->setVisible(false);
     ui->btnNext->setVisible(false);
     ui->lblInstrucktion->setVisible(false);
+    ui->infoSignals->setVisible(false);
+    ui->chkHddWarning->setVisible(false);
+    ui->lblHddAlert->setVisible(false);
 }
 
 void MainWindow::on_btnSaveTime_clicked()
@@ -2153,12 +2667,10 @@ void MainWindow::saveTimeToFile() {
 void MainWindow::checkGtaProcess() {
     if (!ui->checkAutoOn_Off->isChecked()) return;
 
-    QProcess tasklist;
-    tasklist.start("tasklist", QStringList() << "/FI" << "IMAGENAME eq GTA5.exe");
-    tasklist.waitForFinished();
-    QString output = tasklist.readAllStandardOutput();
-
-    bool gtaFound = output.contains("GTA5.exe");
+    // ИСПРАВЛЕНО: Быстрая и легкая проверка процессов вместо медленного tasklist
+    bool gtaFound = isProcessRunning("GTA5.exe") ||
+                    isProcessRunning("GTA5_Enhanced.exe") ||
+                    isProcessRunning("GTA5_Enhanced_BE.exe");
 
     if (gtaFound && !gtaWasRunning) {
         gtaWasRunning = true;
@@ -2271,7 +2783,7 @@ void MainWindow::on_btnNotification_clicked()
 }
 void MainWindow::on_btnDownload_clicked()
 {
-    QDesktopServices::openUrl(QUrl("https://majestic-mods.ru/load/soft/replacex_0_9_0_beta/14-1-0-192"));
+    QDesktopServices::openUrl(QUrl(downloadUrl));
 }
 void MainWindow::on_btnExitNF_clicked()
 {
@@ -2302,6 +2814,7 @@ void MainWindow::on_btnRage_clicked()
 }
 void MainWindow::on_btnSettings_clicked() {
     ui->btnExitGP->setVisible(false);
+    ui->btnExitGP->move(564, 35);
     animateWindowOpen(ui->oknoSettings, ui->btnSettings);
 }
 void MainWindow::on_cmbServer_currentIndexChanged(int index)
@@ -2362,24 +2875,6 @@ void MainWindow::on_checkSound_clicked()
 {
     m_soundSuccess->play();
 }
-void MainWindow::on_checkKnopki_toggled(bool checked)
-{
-    QSettings settings("MyCompany", "MyGameTool");
-
-    settings.setValue("Settings/KnopkiEnable", checked);
-
-    settings.sync();
-    if(checked)
-    {
-        ui->btnReplaceRedux->setImagePath(":/izobr/Redux01-removebg-preview.png");
-        ui->btnReplaceOrig->setImagePath(":/izobr/Orig01.png");
-    }
-    else
-    {
-        ui->btnReplaceRedux->setImagePath("0");
-        ui->btnReplaceOrig->setImagePath("0");
-    }
-}
 void MainWindow::on_btnGaid_clicked()
 {
     QDesktopServices::openUrl(QUrl("https://youtu.be/y7JQ1iXufUE?si=mqFOa9UK32hMu8UT"));
@@ -2430,11 +2925,15 @@ void MainWindow::on_btnSavePreset_clicked() {
     QCheckBox *cbRedux = new QCheckBox("Пути Редукса/Оригинала", &dlg);
     QCheckBox *cbGP = new QCheckBox("Пути Ган-паков", &dlg);
     QCheckBox *cbZV = new QCheckBox("Пути Звуков", &dlg);
+    QCheckBox *cbBR = new QCheckBox("Пути Броников", &dlg);      // Новый чекбокс
+    QCheckBox *cbZM = new QCheckBox("Пути Замененок", &dlg);    // Новый чекбокс
 
     cbRedux->setChecked(true);
     layout->addWidget(cbRedux);
     layout->addWidget(cbGP);
     layout->addWidget(cbZV);
+    layout->addWidget(cbBR);                                    // Добавляем на макет
+    layout->addWidget(cbZM);                                    // Добавляем на макет
 
     QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
     connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
@@ -2457,6 +2956,14 @@ void MainWindow::on_btnSavePreset_clicked() {
         if (cbZV->isChecked()) {
             s.setValue("SoundMod", ui->leditModZV->text());
             s.setValue("SfxPath", ui->leditPapcaZV->text());
+        }
+        if (cbBR->isChecked()) {                                // Сохраняем броники
+            s.setValue("ArmorSourcePath", ui->leditBR_Pack->text());
+            s.setValue("ArmorTargetPath", ui->leditDLS_2->text());
+        }
+        if (cbZM->isChecked()) {                                // Сохраняем замененки
+            s.setValue("ZmSourcePath", ui->leditZM_Pack->text());
+            s.setValue("ZmTargetPath", ui->leditDLS_3->text());
         }
 
         s.endGroup();
@@ -2483,6 +2990,26 @@ void MainWindow::on_cmbPresets_activated(int index) {
     if (s.contains("GunPackPath")) ui->leditGunPuck->setText(s.value("GunPackPath").toString());
     if (s.contains("DlsPath")) ui->leditDLS->setText(s.value("DlsPath").toString());
 
+    // Загрузка путей броников
+    if (s.contains("ArmorSourcePath")) {
+        m_armorSourcePath = s.value("ArmorSourcePath").toString();
+        ui->leditBR_Pack->setText(m_armorSourcePath);
+    }
+    if (s.contains("ArmorTargetPath")) {
+        m_armorTargetPath = s.value("ArmorTargetPath").toString();
+        ui->leditDLS_2->setText(m_armorTargetPath);
+    }
+
+    // Загрузка путей замененок
+    if (s.contains("ZmSourcePath")) {
+        m_zmSourcePath = s.value("ZmSourcePath").toString();
+        ui->leditZM_Pack->setText(m_zmSourcePath);
+    }
+    if (s.contains("ZmTargetPath")) {
+        m_zmTargetPath = s.value("ZmTargetPath").toString();
+        ui->leditDLS_3->setText(m_zmTargetPath);
+    }
+
     if (s.contains("SoundMod")) {
         m_modSoundPath = s.value("SoundMod").toString();
         ui->leditModZV->setText(m_modSoundPath);
@@ -2495,13 +3022,11 @@ void MainWindow::on_cmbPresets_activated(int index) {
     s.endGroup();
 
     // Принудительно сохраняем как текущие настройки
-
     s.setValue("LastPresetName", name);
     s.sync();
 
     saveSettings();
     qInfo() << "Пресет загружен и запомнен:" << name;
-
 }
 
 // 4. Удаление пресета
@@ -2525,6 +3050,7 @@ void MainWindow::on_btnDeletePreset_clicked() {
 }
 void MainWindow::on_btnOpenPress_K_clicked() {
     ui->btnExitGP->setVisible(false);
+    ui->btnExitGP->move(564, 35);
     animateWindowOpen(ui->oknoPresets, ui->btnOpenPress_K);
     ui->lineV->move(1 , 205);
     ui->lineV->setVisible(true);
@@ -2563,16 +3089,15 @@ void MainWindow::on_btnArxivSounds_clicked() {
 // Слот получения результата
 void MainWindow::onUnpackResult(int type, QString resultPath) {
     if (resultPath == "Ошибка") {
-        // Если ошибка — пишем её в нужное поле и играем звук ошибки
         if (type == 0) ui->leditRedux->setText("Ошибка");
         else if (type == 1) ui->leditGunPuck->setText("Ошибка");
         else if (type == 2) ui->leditModZV->setText("Ошибка");
+        else if (type == 3) ui->leditBR_Pack->setText("Ошибка"); // Новый блок
 
         m_soundError->play();
         return;
     }
 
-    // Если всё ок — устанавливаем путь
     if (type == 0) {
         ui->leditRedux->setText(resultPath);
     }
@@ -2581,26 +3106,474 @@ void MainWindow::onUnpackResult(int type, QString resultPath) {
     }
     else if (type == 2) {
         ui->leditModZV->setText(resultPath);
-        // Синхронизируем внутреннюю переменную для звуков, если она используется
         m_modSoundPath = resultPath;
     }
+    else if (type == 3) { // Новый блок
+        ui->leditBR_Pack->setText(resultPath);
+        m_armorSourcePath = resultPath;
+    }
+    // Найди метод MainWindow::onUnpackResult и добавь проверку:
+    else if (type == 4) {
+        ui->leditZM_Pack->setText(resultPath);
+        m_zmSourcePath = resultPath;
 
-    // ГЛАВНОЕ: Сохраняем в реестр/файл настроек
+        // ПРОВЕРКА ОГРАНИЧЕНИЯ (более 5 папок в архиве)
+        QDir dir(resultPath);
+        QStringList subdirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+        if (subdirs.size() > 5) {
+            QMessageBox::warning(this, "Превышение лимита замененок",
+                                 QString("Внимание! В распакованном архиве обнаружено %1 папок замененок.\n"
+                                         "Для стабильности работы игры и избежания вылетов крайне рекомендуется "
+                                         "устанавливать не более 4-5 папок замененок одновременно. "
+                                         "Пожалуйста, сократите их количество вручную.")
+                                     .arg(subdirs.size()));
+        }
+    }
     saveSettings();
-
     m_soundSuccess->play();
     ui->miniProgress->setText("Пути обновлены и сохранены");
 }
-
 void MainWindow::on_btnAutoCopyUpdate_clicked()
 {
     QSettings settings("MyCompany", "MyGameTool");
-    QString rpfPath = findUpdateRpf();
-    if (!rpfPath.isEmpty()) {
-        if (copyUpdateRpfToAppDir(rpfPath)) {
 
-            settings.setValue("FirstRun", true);
-            settings.setValue("Paths/OriginalFile", ui->leditOrig->text());
+    // Попробуем найти автоматически без вызова диалога
+    QString rpfPath = "";
+    QSettings rsReg("HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Rockstar Games\\Grand Theft Auto V", QSettings::NativeFormat);
+    QString basePath = rsReg.value("InstallFolder").toString();
+
+    if (basePath.isEmpty()) {
+        QSettings steamReg("HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Valve\\Steam", QSettings::NativeFormat);
+        QString steamPath = steamReg.value("InstallPath").toString();
+        if (!steamPath.isEmpty()) {
+            basePath = steamPath + "/steamapps/common/Grand Theft Auto V";
         }
     }
+
+    if (!basePath.isEmpty()) {
+        QString testPath = basePath + "/update/update.rpf";
+        if (QFile::exists(testPath)) {
+            rpfPath = QDir::toNativeSeparators(testPath);
+        }
+    }
+
+    if (!rpfPath.isEmpty()) {
+        if (copyUpdateRpfToAppDir(rpfPath)) {
+            settings.setValue("FirstRun", true);
+            settings.setValue("Paths/OriginalFile", ui->leditOrig->text());
+            ui->miniProgress->setText("Оригинал успешно импортирован");
+        } else {
+            qCritical() << "[AutoCopyUpdate] Ошибка копирования автоматически найденного файла:" << rpfPath;
+            ui->leditOrig->setText("Ошибка"); // Выводим "Ошибка" в поле ввода
+        }
+    } else {
+        qCritical() << "[AutoCopyUpdate] Автопоиск файла update.rpf завершился ошибкой. Файл не найден в реестре или по путям Steam.";
+        ui->leditOrig->setText("Ошибка"); // Выводим "Ошибка" в поле ввода
+
+        // Опционально предлагаем ручной поиск
+        QString manualPath = QFileDialog::getOpenFileName(
+            this,
+            "Найдите update.rpf (Grand Theft Auto V Legacy\\update\\update.rpf)",
+            "",
+            "RPF-файлы (*.rpf)"
+            );
+        if (!manualPath.isEmpty()) {
+            if (copyUpdateRpfToAppDir(manualPath)) {
+                settings.setValue("FirstRun", true);
+                settings.setValue("Paths/OriginalFile", ui->leditOrig->text());
+            }
+        }
+    }
+}
+
+void MainWindow::on_chkHddWarning_toggled(bool checked) {
+    if (checked) {
+        if (m_blinkTimer) m_blinkTimer->stop();
+        ui->lblHddAlert->setVisible(false);
+        ui->chkHddWarning->setVisible(false);
+        ui->infoSignals->setVisible(false);
+
+        // Запоминаем, что пользователь видел предупреждение
+        QSettings settings("MyCompany", "MyGameTool");
+        settings.setValue("Settings/HddWarningSeen", true);
+
+        m_soundSuccess->play();
+    }
+}
+void MainWindow::on_btnGP_install_clicked()
+{
+    ui->btnExitGP->setVisible(false);
+    ui->btnExitGP->move(564, 35);
+    animateWindowOpen(ui->oknoGP, ui->btnGP_install);
+    ui->lineV->move(1 , 25);
+    ui->lineV->setVisible(true);
+}
+void MainWindow::on_btnBR_install_clicked()
+{
+    ui->btnExitGP->setVisible(false);
+    ui->btnExitGP->move(564, 35);
+    animateWindowOpen(ui->oknoBR, ui->btnBR_install);
+    ui->lineV->move(1 , 25);
+    ui->lineV->setVisible(true);
+}
+// --- СЛОТЫ ДЛЯ БРОНИКОВ ---
+
+// Автопоиск dlcpacks для броников (аналог ганпаков)
+void MainWindow::on_btnAutoSearchDLS_2_clicked() {
+    QSettings rsReg("HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Rockstar Games\\Grand Theft Auto V", QSettings::NativeFormat);
+    QString basePath = rsReg.value("InstallFolder").toString();
+
+    if (basePath.isEmpty()) {
+        QSettings steamReg("HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Valve\\Steam", QSettings::NativeFormat);
+        QString steamPath = steamReg.value("InstallPath").toString();
+        if (!steamPath.isEmpty()) {
+            basePath = steamPath + "/steamapps/common/Grand Theft Auto V";
+        }
+    }
+
+    QString targetPath;
+    if (!basePath.isEmpty()) {
+        targetPath = basePath + "/update/x64/dlcpacks";
+        if (QDir(targetPath).exists()) {
+            m_armorTargetPath = QDir::toNativeSeparators(targetPath);
+            ui->leditDLS_2->setText(m_armorTargetPath);
+            QSettings("MyCompany", "MyGameTool").setValue("ArmorTargetPath", m_armorTargetPath);
+            return;
+        }
+    }
+
+    qCritical() << "[AutoSearchDLS2] Не удалось автоматически определить директорию dlcpacks для Броников.";
+    ui->leditDLS_2->setText("Ошибка"); // Выводим "Ошибка" в поле ввода
+
+    QString manualPath = QFileDialog::getExistingDirectory(this, "Укажите папку ...\\update\\x64\\dlcpacks", "C:/");
+    if (!manualPath.isEmpty()) {
+        m_armorTargetPath = QDir::toNativeSeparators(manualPath);
+        ui->leditDLS_2->setText(m_armorTargetPath);
+        QSettings("MyCompany", "MyGameTool").setValue("ArmorTargetPath", m_armorTargetPath);
+    }
+}
+// Ручной выбор dlcpacks для броников
+void MainWindow::on_btnDLS_2_clicked() {
+    QString path = QFileDialog::getExistingDirectory(this, "Выберите папку ...\\update\\x64\\dlcpacks", m_armorTargetPath);
+    if (!path.isEmpty()) {
+        m_armorTargetPath = QDir::toNativeSeparators(path);
+        ui->leditDLS_2->setText(m_armorTargetPath);
+        QSettings("MyCompany", "MyGameTool").setValue("ArmorTargetPath", m_armorTargetPath);
+    }
+}
+
+// Ручной выбор папки с брониками
+void MainWindow::on_btnPapkaBR_clicked() {
+    QString path = QFileDialog::getExistingDirectory(this, "Выберите папку с брониками", m_armorSourcePath);
+    if (!path.isEmpty()) {
+        m_armorSourcePath = QDir::toNativeSeparators(path);
+        ui->leditBR_Pack->setText(m_armorSourcePath);
+        QSettings("MyCompany", "MyGameTool").setValue("ArmorSourcePath", m_armorSourcePath);
+    }
+}
+
+// Ручная установка броников
+void MainWindow::on_btnReplaceBR_clicked() {
+    if (m_isOperationPending) return;
+    m_isOperationPending = true;
+    emit requestManualInstallArmorPacks(getCurrentConfig());
+}
+
+// Ручное восстановление оригиналов для броников
+void MainWindow::on_btnReplaceOrigBR_clicked() {
+    if (m_isOperationPending) return;
+    m_isOperationPending = true;
+    emit requestManualRestoreArmorPacks(getCurrentConfig());
+}
+
+// Авто распаковка архива броников (Запуск распаковщика, тип 3)
+void MainWindow::on_btnArxivBR_clicked() {
+    QString path = QFileDialog::getOpenFileName(this, "Выберите архив с брониками", "", "Archives (*.rar *.zip *.7z)");
+    if (!path.isEmpty()) {
+        ui->leditBR_Pack->setText("В процессе.....");
+        emit requestUnpack(3, path, "");
+    }
+}
+
+void MainWindow::on_btnBack_clicked()
+{
+    ui->btnExitGP->setVisible(false);
+    ui->btnExitGP->move(564, 35);
+    animateWindowOpen(ui->oknoDLC, ui->btnBack);
+    ui->lineV->move(1 , 25);
+    ui->lineV->setVisible(true);
+}
+void MainWindow::on_btnBack_2_clicked()
+{
+    ui->btnExitGP->setVisible(false);
+    ui->btnExitGP->move(564, 35);
+    animateWindowOpen(ui->oknoDLC, ui->btnBack_2);
+    ui->lineV->move(1 , 25);
+    ui->lineV->setVisible(true);
+}
+void MainWindow::on_btnBack_3_clicked()
+{
+    ui->btnExitGP->setVisible(false);
+    ui->btnExitGP->move(564, 35);
+    animateWindowOpen(ui->oknoDLC, ui->btnBack_2);
+    ui->lineV->move(1 , 25);
+    ui->lineV->setVisible(true);
+}
+void MainWindow::on_btnClearSetings_clicked()
+{
+    // 1. Показываем диалоговое окно подтверждения
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        "Подтверждение сброса",
+        "Вы уверены, что хотите очистить настройки программы? Это очистит все ваши указанные пути.",
+        QMessageBox::Yes | QMessageBox::No
+        );
+
+    if (reply == QMessageBox::Yes) {
+        // 2. Очищаем настройки через встроенный механизм Qt (удаляет все ключи в ветке реестра)
+        QSettings settings("MyCompany", "MyGameTool");
+        settings.clear();
+        settings.sync();
+
+        // 3. Для дополнительной надежности принудительно выполняем команду реестра.
+        // QProcess запускает утилиты без создания видимого окна консоли (полностью скрытно).
+        QProcess proc;
+        proc.start("reg", QStringList() << "delete" << "HKEY_CURRENT_USER\\Software\\MyCompany\\MyGameTool" << "/f");
+        proc.waitForFinished();
+
+        // 4. Очищаем все поля ввода в интерфейсе
+        ui->leditRedux->clear();
+        ui->leditOrig->clear();
+        ui->leditPapka->clear();
+        ui->leditGunPuck->clear();
+        ui->leditDLS->clear();
+        ui->leditModZV->clear();
+        ui->leditPapcaZV->clear();
+        ui->leditBR_Pack->clear();
+        ui->leditDLS_2->clear();
+
+        // 5. Сбрасываем все чекбоксы автоматической установки
+        ui->checkAutoLoad->setChecked(false);
+        ui->checkAutoLoadGP->setChecked(false);
+        ui->checkAutoLoadZV->setChecked(false);
+        ui->checkAutoLoadBR->setChecked(false);
+
+        // 6. Обнуляем внутренние переменные в оперативной памяти
+        m_modSoundPath.clear();
+        m_x64AudioSfxPath.clear();
+        m_gunPackSourcePath.clear();
+        m_dlcPacksTargetPath.clear();
+        m_armorSourcePath.clear();
+        m_armorTargetPath.clear();
+
+        qInfo() << "Настройки программы и реестр были успешно очищены.";
+
+        // 7. Уведомляем пользователя об успешном завершении
+        QMessageBox::information(this, "Успех", "Все настройки и сохраненные пути успешно сброшены.");
+    }
+}
+// --- СЛОТЫ ДЛЯ ЗАМЕНЕНОК (ZM) ---
+
+// Автопоиск dlcpacks для замененок
+void MainWindow::on_btnAutoSearchDLS_3_clicked() {
+    QSettings rsReg("HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Rockstar Games\\Grand Theft Auto V", QSettings::NativeFormat);
+    QString basePath = rsReg.value("InstallFolder").toString();
+
+    if (basePath.isEmpty()) {
+        QSettings steamReg("HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Valve\\Steam", QSettings::NativeFormat);
+        QString steamPath = steamReg.value("InstallPath").toString();
+        if (!steamPath.isEmpty()) {
+            basePath = steamPath + "/steamapps/common/Grand Theft Auto V";
+        }
+    }
+
+    QString targetPath;
+    if (!basePath.isEmpty()) {
+        targetPath = basePath + "/update/x64/dlcpacks";
+        if (QDir(targetPath).exists()) {
+            m_zmTargetPath = QDir::toNativeSeparators(targetPath);
+            ui->leditDLS_3->setText(m_zmTargetPath);
+            QSettings("MyCompany", "MyGameTool").setValue("ZmTargetPath", m_zmTargetPath);
+            return;
+        }
+    }
+
+    qCritical() << "[AutoSearchDLS3] Не удалось автоматически определить директорию dlcpacks для Замененок.";
+    ui->leditDLS_3->setText("Ошибка"); // Выводим "Ошибка" в поле ввода
+
+    QString manualPath = QFileDialog::getExistingDirectory(this, "Укажите папку ...\\update\\x64\\dlcpacks", "C:/");
+    if (!manualPath.isEmpty()) {
+        m_zmTargetPath = QDir::toNativeSeparators(manualPath);
+        ui->leditDLS_3->setText(m_zmTargetPath);
+        QSettings("MyCompany", "MyGameTool").setValue("ZmTargetPath", m_zmTargetPath);
+    }
+}
+
+// Ручной выбор dlcpacks для замененок
+void MainWindow::on_btnDLS_3_clicked() {
+    QString path = QFileDialog::getExistingDirectory(this, "Выберите папку ...\\update\\x64\\dlcpacks", m_zmTargetPath);
+    if (!path.isEmpty()) {
+        m_zmTargetPath = QDir::toNativeSeparators(path);
+        ui->leditDLS_3->setText(m_zmTargetPath);
+        QSettings("MyCompany", "MyGameTool").setValue("ZmTargetPath", m_zmTargetPath);
+    }
+}
+
+// Ручной выбор папки с замененками
+void MainWindow::on_btnPapkaZM_clicked() {
+    QString path = QFileDialog::getExistingDirectory(this, "Выберите папку с замененками", m_zmSourcePath);
+    if (!path.isEmpty()) {
+        m_zmSourcePath = QDir::toNativeSeparators(path);
+        ui->leditZM_Pack->setText(m_zmSourcePath);
+        QSettings("MyCompany", "MyGameTool").setValue("ZmSourcePath", m_zmSourcePath);
+    }
+}
+
+// Ручная установка замененок
+void MainWindow::on_btnReplaceZM_clicked() {
+    if (m_isOperationPending) return;
+    m_isOperationPending = true;
+    emit requestManualInstallZM(getCurrentConfig());
+}
+
+// Ручное восстановление оригиналов замененок
+void MainWindow::on_btnReplaceOrigZM_clicked() {
+    if (m_isOperationPending) return;
+    m_isOperationPending = true;
+    emit requestManualRestoreZM(getCurrentConfig());
+}
+
+// Распаковка архива с замененками (тип 4)
+void MainWindow::on_btnArxivZM_clicked() {
+    QString path = QFileDialog::getOpenFileName(this, "Выберите архив с замененками", "", "Archives (*.rar *.zip *.7z)");
+    if (!path.isEmpty()) {
+        ui->leditZM_Pack->setText("В процессе.....");
+        emit requestUnpack(4, path, "");
+    }
+}
+
+// Галочка автозагрузки замененок + ограничение на 5 папок + трехсторонний контроль конфликтов
+void MainWindow::on_checkAutoLoadZM_toggled(bool checked) {
+    if (!checked) {
+        QSettings("MyCompany", "MyGameTool").setValue("checkAutoLoadZM", false);
+        return;
+    }
+
+    QString pathDLS = QDir::fromNativeSeparators(ui->leditDLS_3->text()).toLower();
+    QString pathZM = QDir::fromNativeSeparators(ui->leditZM_Pack->text()).toLower();
+
+    if (pathDLS.endsWith("/")) pathDLS.chop(1);
+    if (pathZM.endsWith("/")) pathZM.chop(1);
+
+    bool isDlsOk = pathDLS.endsWith("/dlcpacks") && QDir(pathDLS).exists();
+
+    // Проверяем, что внутри выбранной папки есть папки с dlc.rpf
+    QDir zmDir(pathZM);
+    bool hasDlcFolders = false;
+    QStringList subdirs = zmDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    foreach(const QString &dirName, subdirs) {
+        QDir sub(pathZM + "/" + dirName);
+        if (sub.exists("dlc.rpf")) {
+            hasDlcFolders = true;
+            break;
+        }
+    }
+
+    if (isDlsOk && hasDlcFolders) {
+        // Проверка лимита в 5 папок для стабильности
+        if (subdirs.size() > 5) {
+            QMessageBox::warning(this, "Превышение лимита замененок",
+                                 QString("В выбранной папке обнаружено %1 папок.\n"
+                                         "Для стабильности работы игры рекомендуется устанавливать "
+                                         "не более 4-5 папок одновременно. Пожалуйста, сократите их количество.")
+                                     .arg(subdirs.size()));
+        }
+
+        // Проверка на конфликты с другими dlcpacks модулями
+        QStringList conflicts;
+
+        // С ганпаками
+        if (ui->checkAutoLoadGP->isChecked()) {
+            QDir gpDir(ui->leditGunPuck->text());
+            QStringList gpDirs = gpDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+            foreach(const QString &d, subdirs) {
+                if (gpDirs.contains(d, Qt::CaseInsensitive)) conflicts << d + " (Ган-пак)";
+            }
+        }
+
+        // С брониками
+        if (ui->checkAutoLoadBR->isChecked()) {
+            QDir brDir(ui->leditBR_Pack->text());
+            QStringList brDirs = brDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+            foreach(const QString &d, subdirs) {
+                if (brDirs.contains(d, Qt::CaseInsensitive)) conflicts << d + " (Броники)";
+            }
+        }
+
+        if (!conflicts.isEmpty()) {
+            QMessageBox::warning(this, "Конфликт путей",
+                                 "Обнаружены совпадающие папки установки в разных модах:\n" +
+                                     conflicts.join("\n") +
+                                     "\nОни перезапишут файлы друг друга при автозапуске!");
+        }
+
+        QSettings("MyCompany", "MyGameTool").setValue("checkAutoLoadZM", true);
+    } else {
+        ui->checkAutoLoadZM->blockSignals(true);
+        ui->checkAutoLoadZM->setChecked(false);
+        ui->checkAutoLoadZM->blockSignals(false);
+
+        QStringList errors;
+        if (!isDlsOk) errors << "- Путь DLS должен заканчиваться на 'dlcpacks'";
+        if (!hasDlcFolders) errors << "- В выбранной папке должна быть хотя бы одна папка, содержащая 'dlc.rpf'";
+
+        QMessageBox::critical(this, "Ошибка Замененок", "Проверьте условия:\n" + errors.join("\n"));
+    }
+}
+void MainWindow::on_btnZM_install_clicked()
+{
+    ui->btnExitGP->setVisible(false);
+    ui->btnExitGP->move(564, 35);
+    animateWindowOpen(ui->oknoZM, ui->btnZM_install);
+    ui->lineV->move(1 , 25);
+    ui->lineV->setVisible(true);
+}
+// Плавный показ подсказки с тенью над нужной кнопкой
+void MainWindow::showTooltip(QWidget *targetWidget, const QString &text, bool wrap) {
+    infoPopup->setText(text);
+    if (wrap) {
+        infoPopup->setFixedWidth(250);
+    } else {
+        infoPopup->setMinimumWidth(0);
+        infoPopup->setMaximumWidth(QWIDGETSIZE_MAX);
+        infoPopup->adjustSize();
+        infoPopup->setFixedWidth(infoPopup->sizeHint().width());
+    }
+    infoPopup->adjustSize();
+
+    // Расчет позиции
+    QPoint globalPos = targetWidget->mapToGlobal(QPoint(0, 0));
+    int x = globalPos.x() + (targetWidget->width() / 2) - (infoPopup->width() / 2);
+    int y = globalPos.y() - infoPopup->height() - 5;
+
+    infoPopup->move(x, y);
+    infoPopup->show();
+
+    // Плавно зажигаем системную прозрачность самого окна подсказки (без QGraphicsOpacityEffect!)
+    QPropertyAnimation *anim = new QPropertyAnimation(infoPopup, "windowOpacity");
+    anim->setDuration(220);
+    anim->setStartValue(infoPopup->windowOpacity());
+    anim->setEndValue(1.0);
+    anim->setEasingCurve(QEasingCurve::OutCubic);
+    anim->start(QAbstractAnimation::DeleteWhenStopped);
+}
+
+void MainWindow::hideTooltip() {
+    QPropertyAnimation *anim = new QPropertyAnimation(infoPopup, "windowOpacity");
+    anim->setDuration(180);
+    anim->setStartValue(infoPopup->windowOpacity());
+    anim->setEndValue(0.0);
+    anim->setEasingCurve(QEasingCurve::OutCubic);
+    connect(anim, &QPropertyAnimation::finished, infoPopup, &QWidget::hide);
+    anim->start(QAbstractAnimation::DeleteWhenStopped);
 }

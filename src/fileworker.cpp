@@ -41,7 +41,8 @@ void FileWorker::processInstallation(FileWorker::Config config) {
     emit statusUpdate("Установка модов...");
     emit progressValue(0);
 
-    int total = (config.useRedux ? 1 : 0) + (config.useGunPack ? 1 : 0) + (config.useSounds ? 1 : 0);
+    // Добавляем config.useZM в подсчет шагов установки
+    int total = (config.useRedux ? 1 : 0) + (config.useGunPack ? 1 : 0) + (config.useSounds ? 1 : 0) + (config.useArmor ? 1 : 0) + (config.useZM ? 1 : 0);
     if (total == 0) { emit operationFinished(true, "Задачи не выбраны"); return; }
 
     int current = 0;
@@ -67,6 +68,20 @@ void FileWorker::processInstallation(FileWorker::Config config) {
         current++; emit progressValue((current * 100) / total);
     }
 
+    // 4. ARMOR
+    if (config.useArmor && !config.armorSource.isEmpty()) {
+        emit progressMessage("Установка броников...");
+        installGunPacks(config.armorSource, config.armorTarget, config.armorBackupPath);
+        current++; emit progressValue((current * 100) / total);
+    }
+
+    // 5. ЗАМЕНЕНКИ / СУМКИ (ZM) (Новый блок)
+    if (config.useZM && !config.zmSource.isEmpty()) {
+        emit progressMessage("Установка замененок...");
+        installGunPacks(config.zmSource, config.zmTarget, config.zmBackupPath);
+        current++; emit progressValue((current * 100) / total);
+    }
+
     emit operationFinished(true, "Установка завершена");
 }
 
@@ -89,6 +104,17 @@ void FileWorker::processRestoration(FileWorker::Config config) {
     if (config.useSounds) {
         emit progressMessage("Возврат звуков...");
         internalRestoreSounds(config.sfxPath, config.soundBackupPath);
+    }
+
+    // Новый блок для броников
+    if (config.useArmor) {
+        emit progressMessage("Возврат броников...");
+        restoreGunPacks(config.armorTarget, config.armorBackupPath);
+    }
+    // Добавь этот блок в самый конец метода FileWorker::processRestoration:
+    if (config.useZM) {
+        emit progressMessage("Возврат замененок...");
+        restoreGunPacks(config.zmTarget, config.zmBackupPath);
     }
 
     emit operationFinished(true, "Оригиналы возвращены");
@@ -165,7 +191,15 @@ bool FileWorker::internalRestoreSounds(const QString &sfxPath, const QString &ba
 }
 
 void FileWorker::killGtaEcosystem() {
-    QStringList procs = {"GTA5.exe", "SocialClubHelper.exe", "Launcher.exe", "RockstarService.exe"};
+    // ИСПРАВЛЕНО: Добавлены процессы версии Enhanced
+    QStringList procs = {
+        "GTA5.exe",
+        "GTA5_Enhanced.exe",
+        "GTA5_Enhanced_BE.exe",
+        "SocialClubHelper.exe",
+        "Launcher.exe",
+        "RockstarService.exe"
+    };
     for (const QString &name : procs) {
         HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         PROCESSENTRY32 pe = {sizeof(pe)};
@@ -217,22 +251,43 @@ void FileWorker::processUnpack(int type, QString archivePath, QString originalUp
     emit progressValue(70);
     emit statusUpdate("Очистка мусора...");
 
+    // Найди этот блок внутри void FileWorker::processUnpack(...)
     // --- ЛОГИКА ОРГАНИЗАЦИИ И ОЧИСТКИ ---
     QStringList targets;
     if (type == 0) targets << "update.rpf";
     else if (type == 1) targets << "mpapartment" << "patchday18ng";
     else if (type == 2) targets << "RESIDENT.rpf" << "WEAPONS_PLAYER.rpf";
+    else if (type == 3) targets << "mpapartment"; // patchday11ng и другие обработаем кодом ниже
 
     // 1. Ищем наши цели во всех подпапках (решаем проблему матрешек)
     QDirIterator it(destDir, QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
     struct FoundItem { QString name; QString oldPath; bool isDir; };
     QList<FoundItem> found;
 
+    // Найди цикл прохода по файлам while (it.hasNext()) внутри processUnpack
     while (it.hasNext()) {
         it.next();
-        foreach(QString t, targets) {
-            if (it.fileName().compare(t, Qt::CaseInsensitive) == 0) {
+        if (type == 3) {
+            // Ослабленная валидация для броников: принимаем mpapartment или любые папки patchday...ng
+            QString name = it.fileName().toLower();
+            if (name == "mpapartment" || (name.startsWith("patchday") && name.endsWith("ng"))) {
                 found << FoundItem{it.fileName(), it.filePath(), it.fileInfo().isDir()};
+            }
+        }
+        else if (type == 4) {
+            // Ослабленная защита для замененок: принимаем любую папку мода, если в ней лежит dlc.rpf
+            if (it.fileInfo().isDir()) {
+                QDir subDir(it.filePath());
+                if (subDir.exists("dlc.rpf")) {
+                    found << FoundItem{it.fileName(), it.filePath(), true};
+                }
+            }
+        }
+        else {
+            foreach(QString t, targets) {
+                if (it.fileName().compare(t, Qt::CaseInsensitive) == 0) {
+                    found << FoundItem{it.fileName(), it.filePath(), it.fileInfo().isDir()};
+                }
             }
         }
     }
@@ -297,6 +352,10 @@ void FileWorker::processUnpack(int type, QString archivePath, QString originalUp
 
 
 // Реализация ручных слотов (просто вызывают внутренние методы)
+void FileWorker::manualRestoreZM(FileWorker::Config c) { bool ok = restoreGunPacks(c.zmTarget, c.zmBackupPath); emit operationFinished(ok, ok?"Успех":"Ошибка"); }
+void FileWorker::manualInstallZM(FileWorker::Config c) { bool ok = installGunPacks(c.zmSource, c.zmTarget, c.zmBackupPath); emit operationFinished(ok, ok?"Успех":"Ошибка"); }
+void FileWorker::manualRestoreArmorPacks(FileWorker::Config c) { bool ok = restoreGunPacks(c.armorTarget, c.armorBackupPath); emit operationFinished(ok, ok?"Успех":"Ошибка"); }
+void FileWorker::manualInstallArmorPacks(FileWorker::Config c) { bool ok = installGunPacks(c.armorSource, c.armorTarget, c.armorBackupPath); emit operationFinished(ok, ok?"Успех":"Ошибка"); }
 void FileWorker::manualSmartReplace(const QString &s, const QString &td, const QString &tf) { emit progressValue(50); bool ok = smartReplace(s, td, tf); emit progressValue(100); emit operationFinished(ok, ok?"Успех":"Ошибка"); }
 void FileWorker::manualRestoreGunPacks(FileWorker::Config c) { bool ok = restoreGunPacks(c.dlcPacksTarget, c.backupPath); emit operationFinished(ok, ok?"Успех":"Ошибка"); }
 void FileWorker::manualInstallGunPacks(FileWorker::Config c) { bool ok = installGunPacks(c.gunPackSource, c.dlcPacksTarget, c.backupPath); emit operationFinished(ok, ok?"Успех":"Ошибка"); }

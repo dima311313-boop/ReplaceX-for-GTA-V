@@ -1,26 +1,19 @@
 <RCC>
-    <qresource prefix="/izobr">
-        <file>photo_2026-01-09_19-46-37.jpg</file>
-        <file>photo_2026-01-09_19-46-37-no-bg-preview (carve.photos).png</file>
-        <file>w450h4001385925286Settings.png</file>
-        <file>1647901232_1-abrakadabra-fun-p-donati-alers-1.jpg</file>
-        <file>telegram_icon.png</file>
-        <file>photo_2026-01-15_107-25-59-round-corners.ico</file>
-        <file>png-klev-club-bgmd-p-logotip-doneishen-alerts-png-4.png</file>
-        <file>8022702-removebg-preview.png</file>
-        <file>Screenshot_363.xcf</file>
-        <file>Screenshot_375.png</file>
-        <file>IconG.ico</file>
-        <file>(online).png</file>
-        <file>Redux01-removebg-preview.png</file>
-        <file>Orig01.png</file>
-        <file>YouTube icon.png</file>
-        <file>png-klev-club-bdoc-p-logotip-doneishen-alerts-png-1-round-corners.png</file>
-        <file>Close.png</file>
-        <file>Screenshot_475-Photoroom-round-corners.png</file>
-        <file>Screenshot_476-Photoroom-round-corners.png</file>
-        <file>resursi.qrc</file>
-        <file>Palochka.png</file>
+    <qresource prefix="/">
+        <file>izobr/photo_2026-01-09_19-46-37-no-bg-preview (carve.photos).png</file>
+        <file>izobr/w450h4001385925286Settings.png</file>
+        <file>izobr/telegram_icon.png</file>
+        <file>izobr/photo_2026-01-15_107-25-59-round-corners.ico</file>
+        <file>izobr/8022702-removebg-preview.png</file>
+        <file>izobr/Screenshot_375.png</file>
+        <file>izobr/IconG.ico</file>
+        <file>izobr/YouTube icon.png</file>
+        <file>izobr/png-klev-club-bdoc-p-logotip-doneishen-alerts-png-1-round-corners.png</file>
+        <file>izobr/Close.png</file>
+        <file>izobr/Palochka.png</file>
+        <file>izobr/pistolet.png</file>
+        <file>izobr/bronik.png</file>
+        <file>izobr/zamen.png</file>
     </qresource>
     <qresource prefix="/sounds">
         <file>sounds/Error.wav</file>

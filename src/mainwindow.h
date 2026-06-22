@@ -30,11 +30,22 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
+    QString downloadUrl;
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
 private:
+    QString m_zmSourcePath;
+    QString m_zmTargetPath;
+    QString m_armorSourcePath;
+    QString m_armorTargetPath;
+    QString m_armorBackupPath;
+
     Ui::MainWindow *ui;
+
+    bool isHDD(QString path);
+    QTimer *m_blinkTimer;
+    bool m_isHddDetected = false;
 
     // Поток и рабочий
     QThread *m_workerThread;
@@ -46,9 +57,6 @@ private:
     void updatePresetsCombo();
     void animateFadeOut(QWidget* target);
     void applyModernShadow(QWidget* widget);
-
-    QTimer *onlineTimer;      // Таймер для авто-обновления
-    void updateOnlineStatus(); // Функция запроса к серверу
 
     // Переменные состояния
     bool m_isOperationPending = false; // Чтобы не запускать копирование дважды
@@ -66,7 +74,7 @@ private:
 
     QLabel *marqueeLabel;
     // === UI-элементы ===
-    QLabel *infoPopup;                  //Всплывающее окошко с подсказкой
+    QLabel *infoPopup;                  // Всплывающее окошко с подсказкой (снова QLabel*)
     QGraphicsOpacityEffect *popupOpacity; //Эффект прозрачности для анимации
 
     // === Элементы системного трея ===
@@ -95,6 +103,14 @@ private:
     QString batPath;
 
 
+    int m_textStartX;
+    int m_textEndX;
+    int m_textStartX2;
+    int m_textEndX2;
+    int m_textStartX3;
+    int m_textEndX3;
+
+    int pizda = 1;
     int i = 0;
     bool OneOt = true;
 
@@ -147,8 +163,14 @@ private:
     bool safeCopy(const QString &src, const QString &destFolder, bool isRestoring);
     void blurEf(bool enable);
     void animateWindowOpen(QWidget* target, QWidget* sourceBtn);
+    void showTooltip(QWidget *targetWidget, const QString &text, bool wrap = false);
+    void hideTooltip();
 
 signals:
+    void requestManualRestoreZM(FileWorker::Config config);
+    void requestManualInstallZM(FileWorker::Config config);
+    void requestManualRestoreArmorPacks(FileWorker::Config config);
+    void requestManualInstallArmorPacks(FileWorker::Config config);
     void requestUnpack(int type, QString archivePath, QString originalUpdatePath);
     void requestExtraction(QString archivePath, QString fileName, QString targetFolder);
     // Сигналы для управления рабочим потоком
@@ -222,6 +244,28 @@ private slots:
     void on_btnArxivGuns_clicked();
     void on_btnArxivSounds_clicked();
     void on_btnAutoCopyUpdate_clicked();
+    void on_btnGP_install_clicked();
+    void on_btnBR_install_clicked();
+    void on_btnAutoSearchDLS_2_clicked();
+    void on_btnDLS_2_clicked();
+    void on_btnArxivBR_clicked();
+    void on_btnPapkaBR_clicked();
+    void on_btnReplaceOrigBR_clicked();
+    void on_btnReplaceBR_clicked();
+    void on_checkAutoLoadBR_toggled(bool checked);
+    void on_btnBack_clicked();
+    void on_btnBack_2_clicked();
+    void on_btnClearSetings_clicked();
+    void on_btnAutoSearchDLS_3_clicked();
+    void on_btnDLS_3_clicked();
+    void on_btnArxivZM_clicked();
+    void on_btnPapkaZM_clicked();
+    void on_btnReplaceOrigZM_clicked();
+    void on_btnReplaceZM_clicked();
+    void on_checkAutoLoadZM_toggled(bool checked);
+    void on_btnBack_3_clicked();
+    void on_btnZM_install_clicked();
+
 
     //процессы
     void handleProcessError(QProcess::ProcessError error);
@@ -231,8 +275,8 @@ private slots:
     void onUnpackResult(int type, QString resultPath);
 
     //Чекбоксы
+    void on_chkHddWarning_toggled(bool checked);
     void on_chkAutoZagruzkaWin_stateChanged(int state);
-    void on_checkKnopki_toggled(bool checked);
     void on_checkSound_toggled(bool checked);
     void on_checkAutoLoad_toggled(bool checked);      // Чекбокс: автозагрузка редукса
     void on_checkAutoLoadGP_toggled(bool checked);    // Чекбокс: автозагрузка GP

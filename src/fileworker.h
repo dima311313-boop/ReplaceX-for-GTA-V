@@ -34,11 +34,23 @@ public:
         QString soundModPath;
         QString sfxPath;
         QString soundBackupPath;
+
+        QString armorSource;
+        QString armorTarget;
+        QString armorBackupPath;
+        bool useArmor;
+
+        // --- ДАННЫЕ ДЛЯ ЗАМЕНЕНОК (ZM) ---
+        QString zmSource;
+        QString zmTarget;
+        QString zmBackupPath;
+        bool useZM;
+        // ---------------------------------
+
         bool useRedux;
         bool useGunPack;
         bool useSounds;
     };
-
 signals:
     void unpackFinished(int type, QString resultPath);
     void debugLog(const QString &msg);
@@ -50,6 +62,10 @@ signals:
     void extractionStarted(); // To show "Extracting..." in UI
 
 public slots:
+    void manualRestoreZM(FileWorker::Config config);
+    void manualInstallZM(FileWorker::Config config);
+    void manualRestoreArmorPacks(FileWorker::Config config);
+    void manualInstallArmorPacks(FileWorker::Config config);
     void processUnpack(int type, QString archivePath, QString originalUpdatePath);
     void processInstallation(FileWorker::Config config);
     void processRestoration(FileWorker::Config config);

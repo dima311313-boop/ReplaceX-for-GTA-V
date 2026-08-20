@@ -16,6 +16,12 @@
     "btn1_url": "https://ryznexs.pythonanywhere.com/Ryznexs",
     "btn2_url": "https://ryznexs.pythonanywhere.com/Ryznexs"
   },
+  "donators": [
+    { "name": "Аноним", "amount": 50 },
+    { "name": "megadobry", "amount": 100 },
+    { "name": "Miguel", "amount": 20 },
+    { "name": "Аноним x2", "amount": 50 }
+  ],
   "links": {
     "telegram": "https://t.me/replacexDev",
     "donate": "https://www.donationalerts.com/r/kot6366363",

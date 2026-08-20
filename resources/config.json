@@ -1,8 +1,11 @@
 {
   "app_info": {
-    "latest_version": "0.9.9",
-    "changelog": "• Полный переход на QML\n• Новый дизайн\n• ---",
-    "download_url": "https://ryznexs.pythonanywhere.com/Ryznexs"
+    "latest_version": "1.0.0",
+    "changelog": "• Полный переход на QML\n• Новый киберпанк дизайн\n• Фоновое копирование файлов",
+    "btn1_text": "Скачать v1.0",
+    "btn2_text": "Яндекс Диск",
+    "btn1_url": "https://ryznexs.pythonanywhere.com/Ryznexs",
+    "btn2_url": "https://majestic-mods.ru/load/soft/replacex_0_9_0_beta/14-1-0-192"
   },
   "notification": {
     "id": 1,
@@ -10,8 +13,8 @@
     "message": "---",
     "btn1_text": "Скачать",
     "btn2_text": "Скачать 2",
-    "btn1_url": "https://drive.google.com/your_link_1",
-    "btn2_url": "https://disk.yandex.ru/your_link_2"
+    "btn1_url": "https://ryznexs.pythonanywhere.com/Ryznexs",
+    "btn2_url": "https://ryznexs.pythonanywhere.com/Ryznexs"
   },
   "links": {
     "telegram": "https://t.me/replacexDev",

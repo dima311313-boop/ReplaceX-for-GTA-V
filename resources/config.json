@@ -1,7 +1,7 @@
 {
   "app_info": {
-    "latest_version": "1.0.0",
-    "changelog": "• Полный переход на QML\n• Новый киберпанк дизайн\n• Фоновое копирование файлов",
+    "latest_version": "0.9.9",
+    "changelog": "• Полный переход на QML\n• Новый дизайн\n• ---",
     "btn1_text": "Скачать v1.0",
     "btn2_text": "Яндекс Диск",
     "btn1_url": "https://ryznexs.pythonanywhere.com/Ryznexs",

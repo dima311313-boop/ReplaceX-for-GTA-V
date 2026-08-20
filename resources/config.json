@@ -1,0 +1,21 @@
+{
+  "app_info": {
+    "latest_version": "1.0.0",
+    "changelog": "• Полный переход на QML\n• Новый киберпанк дизайн\n• Фоновое копирование файлов",
+    "download_url": "https://github.com/your_project/releases"
+  },
+  "notification": {
+    "id": 1,
+    "title": "Доступно обновление Redux!",
+    "message": "Вышла новая версия модификации ReplaceX Redux v2.4.\n\n• Улучшена стабильность графики\n• Обновлены шейдеры освещения\n• Исправлены вылеты в сюжетном режиме",
+    "btn1_text": "Скачать",
+    "btn2_text": "Скачать 2",
+    "btn1_url": "https://drive.google.com/your_link_1",
+    "btn2_url": "https://disk.yandex.ru/your_link_2"
+  },
+  "links": {
+    "telegram": "https://t.me/your_channel",
+    "donate": "https://www.donationalerts.com/r/your_profile",
+    "license": "https://github.com/your_project"
+  }
+}
